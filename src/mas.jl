@@ -1,11 +1,4 @@
-function cic!(ρ, 
-              data_x, 
-              data_y, 
-              data_z, 
-              data_w, 
-              box_size, 
-              box_min; 
-              wrap::Bool = true)
+function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
 
     
     n_bins = size(ρ)
@@ -56,18 +49,12 @@ function cic!(ρ,
     ρ
 end
 
-function read_cic!(output, 
-                   field, 
-                   data_x, 
-                   data_y, 
-                   data_z, 
-                   box_size, 
-                   box_min) 
+function read_cic!(output::AbstractVector{T}, field::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}) where T <: Real
 
     dims = size(field)
-    cell_size = map(eltype(box_size), box_size ./ dims)
-    u = zeros(Real, 3)
-    d = zeros(Real, 3)
+    cell_size = map(T, box_size ./ dims)
+    u = zeros(T, 3)
+    d = zeros(T, 3)
     index_u = zeros(Int, 3)
     index_d = zeros(Int, 3)
     data = (data_x, data_y, data_z)

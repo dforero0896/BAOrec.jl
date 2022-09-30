@@ -21,13 +21,13 @@ end #struct
 
 
     
-function setup_overdensity!(δ_r,
+function setup_overdensity!(δ_r::Array{T, 3},
                             recon::IterativeRecon,
-                            data_x, 
-                            data_y, 
-                            data_z, 
-                            data_w, 
-                            ) 
+                            data_x::AbstractVector{T}, 
+                            data_y::AbstractVector{T}, 
+                            data_z::AbstractVector{T}, 
+                            data_w::AbstractVector{T}, 
+                            ) where T <: Real
 
 
     cic!(δ_r, data_x, data_y, data_z, data_w, recon.box_size, recon.box_min)
@@ -41,15 +41,15 @@ function setup_overdensity!(δ_r,
     smooth!(δ_r, recon.smoothing_radius, recon.box_size)
 end
 
-
-function reconstructed_overdensity!(δ_r,
+function reconstructed_overdensity!(δ_r::Array{T, 3},
                                     recon::IterativeRecon,
-                                    data_x, 
-                                    data_y, 
-                                    data_z, 
-                                    data_w)
+                                    data_x::AbstractVector{T}, 
+                                    data_y::AbstractVector{T}, 
+                                    data_z::AbstractVector{T}, 
+                                    data_w::AbstractVector{T}) where T <: Real
     los = recon.los
     setup_overdensity!(δ_r, recon, data_x, data_y, data_z, data_w)
+    @show δ_r[100,100,100]
     δ_s = copy(δ_r)
     kvec = k_vec([size(δ_r)...], recon.box_size)
     xvec = los === nothing ? x_vec([size(δ_r)...], recon.box_size) : nothing
@@ -62,11 +62,11 @@ end #func
 
 
 function read_shifts(recon::AbstractRecon,
-                    data_x, 
-                    data_y, 
-                    data_z,
-                    δ_r;
-                    field = :disp, )
+                    data_x::AbstractVector{T}, 
+                    data_y::AbstractVector{T}, 
+                    data_z::AbstractVector{T},
+                    δ_r::Array{T, 3};
+                    field = :disp, )  where T<:Real
     los = recon.los
     displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min)
     data = (data_x, data_y, data_z)
@@ -105,11 +105,11 @@ function read_shifts(recon::AbstractRecon,
 end #func
 
 function reconstructed_positions(recon::AbstractRecon,
-                                data_x, 
-                                data_y, 
-                                data_z,
-                                δ_r;
-                                field = :disp, ) 
+                                data_x::AbstractVector{T}, 
+                                data_y::AbstractVector{T}, 
+                                data_z::AbstractVector{T},
+                                δ_r::Array{T, 3};
+                                field = :disp, )  where T<:Real
 
     displacements = read_shifts(recon, data_x, data_y, data_z, δ_r; field=field)
     data = (data_x, data_y, data_z)

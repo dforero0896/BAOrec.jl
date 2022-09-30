@@ -1,7 +1,7 @@
 
 
-function k_vec(dims, box_size)
-    T = eltype(box_size)
+function k_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}) where T<:Real
+
     sample_rate = map(T, 2π .* dims ./ box_size)
     kx = rfftfreq(dims[1], sample_rate[1])
     ky = fftfreq(dims[2], sample_rate[2])
@@ -9,13 +9,13 @@ function k_vec(dims, box_size)
     (kx, ky, kz)
 end #func
 
-function x_vec(dims, box_size) 
-    T = eltype(box_size)
+function x_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}) where T<:Real
+    
     cell_size = map(T, box_size ./ dims)
     Tuple(collect(0.5 * cell_size[i]:cell_size[i]:box_size[i]) for i in 1:3)
 end #func
 
-function rho_to_delta!(ρ) 
+function rho_to_delta!(ρ::Array{T, 3}) where T <: Real
     
     ρ_mean = mean(ρ)
     @Threads.threads for I in CartesianIndices(ρ)
@@ -25,7 +25,7 @@ function rho_to_delta!(ρ)
     ρ
 end #func
 
-function smooth!(field, smoothing_radius, box_size)
+function smooth!(field::Array{T, 3}, smoothing_radius::T, box_size::SVector{3,T}) where T <: Real
 
     plan = plan_rfft(field)
     field_k = plan * field
@@ -38,6 +38,3 @@ function smooth!(field, smoothing_radius, box_size)
     ldiv!(field, plan, field_k)
     field
 end #func
-
-
-

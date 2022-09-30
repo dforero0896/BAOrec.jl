@@ -20,7 +20,7 @@ recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0,
                               box_size = box_size, 
                               box_min = box_min,
                               los = los)
-BAOrec.setup_overdensity!(rho,
+@time BAOrec.setup_overdensity!(rho,
                         recon,
                         view(data, 1,:), view(data, 2,:), view(data, 3,:), data_w,
                         );

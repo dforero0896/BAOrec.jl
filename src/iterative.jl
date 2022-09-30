@@ -2,7 +2,7 @@
 
 
 
-function iterate!(δ_r, δ_s, k⃗, iter, β;
+function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tuple{AbstractVector{T}, AbstractVector{T}, AbstractVector{T}}, iter::Int, β::T;
                 r̂ = nothing, x⃗ = nothing) where T <: Real
     println("Iteration ", iter, " \n")
 
@@ -24,7 +24,7 @@ function iterate!(δ_r, δ_s, k⃗, iter, β;
         for i in 1:3
             for j in i:3
 
-                factor::Real = (1. + float(i != j)) * β
+                factor::T = (1. + T(i != j)) * β
                 factor = iter === 1 ? factor / (1 + β) : factor
                 
                 @Threads.threads for I in CartesianIndices(δ_k)
@@ -50,7 +50,7 @@ function iterate!(δ_r, δ_s, k⃗, iter, β;
                 continue
             end #if
 
-            factor::Real = β
+            factor::T = β
             factor = iter === 1 ? factor / (1 + β) : factor
 
             @Threads.threads for I in CartesianIndices(δ_k)
@@ -66,11 +66,12 @@ function iterate!(δ_r, δ_s, k⃗, iter, β;
         end #for
 
     end #if
+
     δ_r
 end #func
 
 
-function compute_displacements(δ_r, data_x, data_y, data_z, box_size, box_min) 
+function compute_displacements(δ_r::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}) where T <: Real
 
     k⃗ = k_vec([size(δ_r)...], box_size)
     plan = plan_rfft(δ_r)   
@@ -78,7 +79,7 @@ function compute_displacements(δ_r, data_x, data_y, data_z, box_size, box_min)
     
     Ψ_k = similar(δ_k)
     Ψ_r = similar(δ_r)
-    Ψ_interp = Tuple(zeros(Real, size(data_x)...) for _ in 1:3)
+    Ψ_interp = Tuple(zeros(T, size(data_x)...) for _ in 1:3)
     for i in 1:3
         @Threads.threads for I in CartesianIndices(δ_k)
             k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
