@@ -2,7 +2,7 @@ function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector
 
     
     n_bins = size(ρ)
-    @Threads.threads for i in eachindex(data_x)
+    for i in eachindex(data_x)
 
         if wrap
             data_x[i] = (data_x[i] + box_size[1]) % box_size[1]
@@ -10,32 +10,34 @@ function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector
             data_z[i] = (data_z[i] + box_size[3]) % box_size[3]
         end #if
 
-        x::Real = (data_x[i] - box_min[1]) * n_bins[1] / box_size[1] + 1
-        y::Real = (data_y[i] - box_min[2]) * n_bins[2] / box_size[2] + 1
-        z::Real = (data_z[i] - box_min[3]) * n_bins[3] / box_size[3] + 1
-
+        x::T = (data_x[i] - box_min[1]) * n_bins[1] / box_size[1] + 1
+        y::T = (data_y[i] - box_min[2]) * n_bins[2] / box_size[2] + 1
+        z::T = (data_z[i] - box_min[3]) * n_bins[3] / box_size[3] + 1
+        #@show box_min
         x0::Int = Int(floor(x))
         y0::Int = Int(floor(y))
         z0::Int = Int(floor(z))
 
-        wx1::Real = x - x0
-        wx0::Real = 1 - wx1
-        wy1::Real = y - y0
-        wy0::Real = 1 - wy1
-        wz1::Real = z - z0
-        wz0::Real = 1 - wz1
+        wx1::T = x - x0
+        wx0::T = 1 - wx1
+        wy1::T = y - y0
+        wy0::T = 1 - wy1
+        wz1::T = z - z0
+        wz0::T = 1 - wz1
 
         x0 = (x0 == n_bins[1]+1) ? 1 : x0
         y0 = (y0 == n_bins[2]+1) ? 1 : y0
         z0 = (z0 == n_bins[3]+1) ? 1 : z0
 
-        x1 = (x0 == n_bins[1]) ? 1 : x0 + 1
-        y1 = (y0 == n_bins[2]) ? 1 : y0 + 1
-        z1 = (z0 == n_bins[3]) ? 1 : z0 + 1
+
+        x1 = (x0 == n_bins[1]) & wrap ? 1 : x0 + 1
+        y1 = (y0 == n_bins[2]) & wrap ? 1 : y0 + 1
+        z1 = (z0 == n_bins[3]) & wrap ? 1 : z0 + 1
 
         wx0 *= data_w[i]
         wx1 *= data_w[i]
-
+        #@show x0,y0,z0
+        #@show x1,y1,z1
         
         ρ[x0,y0,z0] += wx0 * wy0 * wz0
         ρ[x1,y0,z0] += wx1 * wy0 * wz0
@@ -49,7 +51,7 @@ function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector
     ρ
 end
 
-function read_cic!(output::AbstractVector{T}, field::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}) where T <: Real
+function read_cic!(output::AbstractVector{T}, field::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
 
     dims = size(field)
     cell_size = map(T, box_size ./ dims)
@@ -65,9 +67,9 @@ function read_cic!(output::AbstractVector{T}, field::Array{T, 3}, data_x::Abstra
             u[j] = dist - dist_i
             d[j] = 1 - u[j]
             dist_i += 1
-            index_d[j] = dist_i > dims[j] ? dist_i - dims[j] : dist_i
+            index_d[j] = (dist_i > dims[j]) & wrap ? dist_i - dims[j] : dist_i
             index_u[j] = index_d[j] + 1
-            index_u[j] = index_u[j] > dims[j] ? index_u[j] - dims[j] : index_u[j]
+            index_u[j] = (index_u[j] > dims[j]) & wrap ? index_u[j] - dims[j] : index_u[j]
         end #for 
         output[i] = field[index_d[1], index_d[2], index_d[3]] * d[1] * d[2] * d[3] + 
                     field[index_d[1], index_d[2], index_u[3]] * d[1] * d[2] * u[3]+

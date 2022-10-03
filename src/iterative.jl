@@ -9,35 +9,35 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
     
     plan = plan_rfft(δ_r)
     δ_k = plan * δ_r # δ_k computed from the current real δ
-    @Threads.threads for I in CartesianIndices(δ_k)
+    for I in CartesianIndices(δ_k)
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
-        k² = k² == 0 ? 1. : k²
+        k² = k² == 0 ? 1 : k²
         δ_k[I] /= k²
     end #for
     δ_k[1,1,1] = 0.
     ∂Ψj_∂xi_k = similar(δ_k)
     ∂Ψj_∂xi_x = similar(δ_r)
+    δ_r .= δ_s
     if r̂ === nothing
         @assert x⃗ != nothing
         println("Using local line of sight r̂. \n")
-
         for i in 1:3
             for j in i:3
-
+                    
                 factor::T = (1. + T(i != j)) * β
-                factor = iter === 1 ? factor / (1 + β) : factor
+                factor = iter == 1 ? factor / (1 + β) : factor
                 
-                @Threads.threads for I in CartesianIndices(δ_k)
+                for I in CartesianIndices(δ_k)
                     ∂Ψj_∂xi_k[I] = k⃗[i][I[i]] * k⃗[j][I[j]] * δ_k[I]
                 end #for
 
                 ldiv!(∂Ψj_∂xi_x, plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-                @Threads.threads for I in CartesianIndices(δ_r)
+                for I in CartesianIndices(δ_r)
                     x² = x⃗[1][I[1]]^2 + x⃗[2][I[2]]^2 + x⃗[3][I[3]]^2
-                    x² = x² == 0 ? 1 : x²
-                    δ_r[I] = δ_s[I] -  factor * ∂Ψj_∂xi_x[I] * x⃗[i][I[i]] * x⃗[j][I[j]] / x²
+                    δ_r[I] = x² > 0 ? δ_r[I] -  factor * ∂Ψj_∂xi_x[I] * x⃗[i][I[i]] * x⃗[j][I[j]] / x² : 0
                 end #for
+    
 
             end #for
         end #for
@@ -53,14 +53,14 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
             factor::T = β
             factor = iter === 1 ? factor / (1 + β) : factor
 
-            @Threads.threads for I in CartesianIndices(δ_k)
+            for I in CartesianIndices(δ_k)
                 ∂Ψj_∂xi_k[I] = k⃗[i][I[i]]^2 * r̂[i] * δ_k[I]
             end #for
 
             ldiv!(∂Ψj_∂xi_x, plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-            @Threads.threads for I in CartesianIndices(δ_r)
-                δ_r[I] = δ_s[I] - factor * ∂Ψj_∂xi_x[I]
+            for I in CartesianIndices(δ_r)
+                δ_r[I] = δ_r[I] - factor * ∂Ψj_∂xi_x[I]
             end #for
 
         end #for
@@ -81,7 +81,7 @@ function compute_displacements(δ_r::Array{T, 3}, data_x::AbstractVector{T}, dat
     Ψ_r = similar(δ_r)
     Ψ_interp = Tuple(zeros(T, size(data_x)...) for _ in 1:3)
     for i in 1:3
-        @Threads.threads for I in CartesianIndices(δ_k)
+        for I in CartesianIndices(δ_k)
             k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
             k² = k² == 0 ? 1. : k²
             Ψ_k[I] = im * k⃗[i][I[i]] * δ_k[I] / k²
