@@ -31,12 +31,7 @@ function setup_overdensity!(δ_r::AbstractArray{T, 3},
     cic!(δ_r, data_x, data_y, data_z, data_w, recon.box_size, recon.box_min, wrap = wrap)
     smooth!(δ_r, recon.smoothing_radius, recon.box_size, recon.fft_plan)
     δ_r_mean = mean(δ_r)
-    for I in CartesianIndices(δ_r)
-        δ_r[I] /= δ_r_mean
-        δ_r[I] -= 1.
-        δ_r[I] /= recon.bias
-    end #for
-
+    @. δ_r = ((δ_r / δ_r_mean) - 1) / recon.bias
     δ_r
 end
 
@@ -170,4 +165,16 @@ function reconstructed_positions(recon::AbstractRecon,
         data_rec[i] .= data[i] .- displacements[i]
     end #for
     data_rec
+end #func
+
+function preallocate_memory(recon::AbstractRecon, n_bins)
+    
+    out = Dict()
+    out[:δ_r] = zeros(typeof(recon.bias), n_bins...)
+    out[:δ_s] = zero(out[:δ_r])
+    out[:δ_k] = zeros(Complex{eltype(out[:δ_r])}, Int(n_bins[1] / 2 + 1), n_bins[2], n_bins[3])
+    out[:∂Ψj_∂xi_k] = zero(out[:δ_k])
+    out[:∂Ψj_∂xi_x] = zero(out[:δ_r])
+    out
+
 end #func

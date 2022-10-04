@@ -41,6 +41,34 @@ function smooth!(field::Array{T, 3}, smoothing_radius::T, box_size::SVector{3,T}
     field
 end #func
 
+
+@kernel function laplace_kernel!(out_field, @Const(k⃗), @Const(field))
+    I = @index(Global, CartesianIndex)
+    out_field[I] = field[I] * k⃗[I[1]]^2 + k⃗[I[2]]^2 + k⃗[I[3]]^2
+end #function
+
+@kernel function gaussian_filter_kernel!(field, k1, k2, k3, smoothing_radius)
+    I = @index(Global, Cartesian)
+    k² = k1[I[1]]^2 + k2[I[2]]^2 + k3[I[3]]^2
+    field[I] *= exp(-0.5 *  smoothing_radius^2 * k²)
+end #function
+
+
+function smooth!(field::CuArray{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
+
+    
+    field_k = fft_plan * field
+    k⃗ = map(CuArray, k_vec([size(field)...], box_size))
+    #k² = typeof(field)([k⃗[1][i]^2 + k⃗[2][j]^2 + k⃗[3][k]^2 for i in eachindex(k⃗[1]), j in eachindex(k⃗[2]), k in eachindex(k⃗[3])])
+    #@. field_k *= exp(-0.5 * smoothing_radius^2 * k²)
+    device = KernelAbstractions.get_device(field_k)
+    kernel! = gaussian_filter_kernel!(device, 256)
+    ev = kernel!(field_k, k⃗..., smoothing_radius, ndrange = size(field_k))
+    wait(ev)
+    ldiv!(field, fft_plan, field_k)
+    field
+end #func
+
 function setup_box(pos_x, pos_y, pos_z, box_pad)
 
     data = (pos_x, pos_y, pos_z)
@@ -51,4 +79,3 @@ function setup_box(pos_x, pos_y, pos_z, box_pad)
     box_size, box_min
 
 end #func
-

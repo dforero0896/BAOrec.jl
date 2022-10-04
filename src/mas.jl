@@ -1,13 +1,13 @@
-function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
+function cic!(ρ::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
 
     
     n_bins = size(ρ)
     for i in eachindex(data_x)
 
         if wrap
-            data_x[i] = (data_x[i] + box_size[1]) % box_size[1]
-            data_y[i] = (data_y[i] + box_size[2]) % box_size[2]
-            data_z[i] = (data_z[i] + box_size[3]) % box_size[3]
+            data_x[i] = (data_x[i] - box_min[1]) > box_size[1] ?  data_x[i] - box_size[1] : data_x[i]
+            data_y[i] = (data_y[i] - box_min[1]) > box_size[1] ?  data_y[i] - box_size[1] : data_y[i]
+            data_z[i] = (data_z[i] - box_min[1]) > box_size[1] ?  data_z[i] - box_size[1] : data_z[i]
         end #if
 
         x::T = (data_x[i] - box_min[1]) * n_bins[1] / box_size[1] + 1
@@ -50,8 +50,63 @@ function cic!(ρ::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector
     end
     ρ
 end
+@kernel function cic_kernel!(ρ, n_bins, data_x, data_y, data_z, data_w, box_size, box_min, wrap)
 
-function read_cic!(output::AbstractVector{T}, field::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
+    I = @index(Global, Linear)
+    if wrap
+        data_x[I] = (data_x[I] - box_min[1]) > box_size[1] ?  data_x[I] - box_size[1] : data_x[I]
+        data_y[I] = (data_y[I] - box_min[1]) > box_size[1] ?  data_y[I] - box_size[1] : data_y[I]
+        data_z[I] = (data_z[I] - box_min[1]) > box_size[1] ?  data_z[I] - box_size[1] : data_z[I]
+    end #if
+
+    x = (data_x[I] - box_min[1]) * n_bins[1] / box_size[1] + 1
+    y = (data_y[I] - box_min[2]) * n_bins[2] / box_size[2] + 1
+    z = (data_z[I] - box_min[3]) * n_bins[3] / box_size[3] + 1
+
+    x0 = Int(floor(x))
+    y0 = Int(floor(y))
+    z0 = Int(floor(z))
+
+    wx1 = x - x0
+    wx0 = 1 - wx1
+    wy1 = y - y0
+    wy0 = 1 - wy1
+    wz1 = z - z0
+    wz0 = 1 - wz1
+
+    x0 = (x0 == n_bins[1]+1) ? 1 : x0
+    y0 = (y0 == n_bins[2]+1) ? 1 : y0
+    z0 = (z0 == n_bins[3]+1) ? 1 : z0
+
+
+    x1 = (x0 == n_bins[1]) & wrap ? 1 : x0 + 1
+    y1 = (y0 == n_bins[2]) & wrap ? 1 : y0 + 1
+    z1 = (z0 == n_bins[3]) & wrap ? 1 : z0 + 1
+
+    wx0 *= data_w[I]
+    wx1 *= data_w[I]
+    
+    
+    CUDA.@atomic ρ[x0,y0,z0] += wx0 * wy0 * wz0
+    CUDA.@atomic ρ[x1,y0,z0] += wx1 * wy0 * wz0
+    CUDA.@atomic ρ[x0,y1,z0] += wx0 * wy1 * wz0
+    CUDA.@atomic ρ[x0,y0,z1] += wx0 * wy0 * wz1
+    CUDA.@atomic ρ[x1,y1,z0] += wx1 * wy1 * wz0
+    CUDA.@atomic ρ[x1,y0,z1] += wx1 * wy0 * wz1
+    CUDA.@atomic ρ[x0,y1,z1] += wx0 * wy1 * wz1
+    CUDA.@atomic ρ[x1,y1,z1] += wx1 * wy1 * wz1
+
+end #func
+function cic!(ρ::CuArray{T, 3}, data_x::CuArray{T}, data_y::CuArray{T}, data_z::CuArray{T}, data_w::CuArray{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
+
+    kernel! = cic_kernel!(KernelAbstractions.get_device(ρ), 512)
+    n_bins = cu([size(ρ)...])
+    ev = kernel!(ρ, n_bins, data_x, data_y, data_z, data_w, box_size, box_min, wrap, ndrange = size(data_x))
+    wait(ev)
+    ρ
+end
+
+function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
 
     dims = size(field)
     cell_size = map(T, box_size ./ dims)
