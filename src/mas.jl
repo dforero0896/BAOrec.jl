@@ -138,3 +138,66 @@ function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x
     end #for
     output
 end #func
+
+@kernel function read_cic_kernel!(output, field, data_x, data_y, data_z, box_size, box_min, dims, wrap)
+
+    i = @index(Global, Linear)
+    dist_x = (data_x[i] - box_min[1]) * dims[1] / box_size[1]
+    dist_y = (data_y[i] - box_min[2]) * dims[2] / box_size[2]
+    dist_z = (data_z[i] - box_min[3]) * dims[3] / box_size[3]
+
+    dist_i_x = Int(floor(dist_x)) 
+    dist_i_y = Int(floor(dist_y)) 
+    dist_i_z = Int(floor(dist_z)) 
+
+    ux = dist_x - dist_i_x
+    uy = dist_y - dist_i_y
+    uz = dist_z - dist_i_z
+
+    dx = 1 - ux
+    dy = 1 - uy
+    dz = 1 - uz
+
+    dist_i_x += 1
+    dist_i_y += 1
+    dist_i_z += 1
+
+
+    index_d_x = (dist_i_x > dims[1]) & wrap ? dist_i_x - dims[1] : dist_i_x
+    index_d_y = (dist_i_y > dims[2]) & wrap ? dist_i_y - dims[2] : dist_i_y
+    index_d_z = (dist_i_z > dims[3]) & wrap ? dist_i_z - dims[3] : dist_i_z
+
+    index_u_x = index_d_x + 1
+    index_u_y = index_d_y + 1
+    index_u_z = index_d_z + 1
+
+
+    index_u_x = (index_u_x > dims[1]) & wrap ? index_u_x - dims[1] : index_u_x
+    index_u_y = (index_u_y > dims[2]) & wrap ? index_u_y - dims[2] : index_u_y
+    index_u_z = (index_u_z > dims[3]) & wrap ? index_u_z - dims[3] : index_u_z
+
+
+    output[i] = field[index_d_x, index_d_y, index_d_z] * dx * dy * dz + 
+                field[index_d_x, index_d_y, index_u_z] * dx * dy * uz +
+                field[index_d_x, index_u_y, index_d_z] * dx * uy * dz +
+                field[index_d_x, index_u_y, index_u_z] * dx * uy * uz +
+                field[index_u_x, index_d_y, index_d_z] * ux * dy * dz +
+                field[index_u_x, index_d_y, index_u_z] * ux * dy * uz +
+                field[index_u_x, index_u_y, index_d_z] * ux * uy * dz +
+                field[index_u_x, index_u_y, index_u_z] * ux * uy * uz
+
+
+
+
+
+
+end #func
+
+function read_cic!(output::CuArray{T}, field::CuArray{T, 3}, data_x::CuArray{T}, data_y::CuArray{T}, data_z::CuArray{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
+
+    kernel! = read_cic_kernel!(KernelAbstractions.get_device(output), 512)
+    dims = cu([size(ρ)...])
+    ev = kernel!(output, field, data_x, data_y, data_z, box_size, box_min, dims, wrap, ndrange = size(data_x))
+    wait(ev)
+
+end #func
