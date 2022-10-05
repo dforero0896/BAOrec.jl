@@ -196,7 +196,7 @@ end #func
 function read_cic!(output::CuArray{T}, field::CuArray{T, 3}, data_x::CuArray{T}, data_y::CuArray{T}, data_z::CuArray{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
 
     kernel! = read_cic_kernel!(KernelAbstractions.get_device(output), 512)
-    dims = cu([size(ρ)...])
+    dims = cu([size(field)...])
     ev = kernel!(output, field, data_x, data_y, data_z, box_size, box_min, dims, wrap, ndrange = size(data_x))
     wait(ev)
 

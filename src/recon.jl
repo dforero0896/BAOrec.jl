@@ -115,8 +115,8 @@ function read_shifts(recon::AbstractRecon,
                     δ_r::AbstractArray{T, 3};
                     field = :disp, )  where T<:Real
     los = recon.los
-    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan)
-    data = (data_x, data_y, data_z)
+    displacements = map(Array, compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan))
+    data = map(Array, (data_x, data_y, data_z)) #This involves too much data-copying
     if field === :disp
         return displacements
     else
@@ -160,9 +160,9 @@ function reconstructed_positions(recon::AbstractRecon,
 
     displacements = read_shifts(recon, data_x, data_y, data_z, δ_r; field=field)
     data = (data_x, data_y, data_z)
-    data_rec = Tuple(similar(d) for d in data)
+    data_rec = map(Array, Tuple(similar(d) for d in data))
     for i in 1:3
-        data_rec[i] .= data[i] .- displacements[i]
+        data_rec[i] .= Array(data[i]) .- displacements[i]
     end #for
     data_rec
 end #func

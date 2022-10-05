@@ -7,7 +7,7 @@ using StaticArrays
 using Statistics
 using CUDA
 using KernelAbstractions
-
+using FFTW
 
 test_fn = "/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.npy"
 
@@ -54,13 +54,24 @@ fill!(rho, 0);
 p2 = heatmap(dropdims(mean(Array(rho), dims=1), dims=1), aspect_ratio = :equal)
 plot(p1, p2, layout = 2)
 savefig("/home/astro/dforero/codes/BAOrec/examples/simulation_gpu.png")
-exit()
+
+rho = Array(rho)
+recon.fft_plan = plan_rfft(rho)
 @time new_pos = BAOrec.reconstructed_positions(recon, view(data, 1,:), view(data, 2,:), view(data, 3,:), rho; field = :sum);
 @time rx, ry, rz = box_size[1] * rand(Float32, 10 .* size(data,2)), box_size[2] * rand(Float32, 10 .* size(data,2)), box_size[3] * rand(Float32, 10 .* size(data,2));
 @time new_rand_sym = BAOrec.reconstructed_positions(recon, rx, ry, rz, rho; field = :sum);
 @time new_rand_iso = BAOrec.reconstructed_positions(recon, rx, ry, rz, rho; field = :disp);
 
+#@time new_pos = BAOrec.reconstructed_positions(recon, cu(data[1,:]), cu(data[2,:]), cu(data[3,:]), rho; field = :sum);
+#@time rx, ry, rz = box_size[1] * rand(Float32, 10 .* size(data,2)), box_size[2] * rand(Float32, 10 .* size(data,2)), box_size[3] * rand(Float32, 10 .* size(data,2));
+#@time rx, ry, rz = map(cu, (rx, ry, rz))
+#@time new_rand_sym = BAOrec.reconstructed_positions(recon, rx, ry, rz, rho; field = :sum);
+#@time new_rand_iso = BAOrec.reconstructed_positions(recon, rx, ry, rz, rho; field = :disp);
 
-npzwrite("/home/users/d/dforeros/.julia/dev/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.rec.npy", hcat(new_pos...))
-npzwrite("/home/users/d/dforeros/.julia/dev/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.sym.npy", hcat(new_rand_sym...))
-npzwrite("/home/users/d/dforeros/.julia/dev/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.iso.npy", hcat(new_rand_iso...))
+@time new_pos = map(Array, new_pos)
+@time new_rand_sym = map(Array, new_rand_sym)
+@time new_rand_iso = map(Array, new_rand_iso)
+
+npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.rec.npy", hcat(new_pos...))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.sym.npy", hcat(new_rand_sym...))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.iso.npy", hcat(new_rand_iso...))

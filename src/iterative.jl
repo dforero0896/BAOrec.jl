@@ -145,9 +145,35 @@ function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVe
 end #func
 
 
+@kernel function gradient_kernel!(out_field, @Const(k⃗), field, i)
+    I = @index(Global, Cartesian)
+    out_field[I] = field[I] * k⃗[i][I[i]]
+end #function
+
+function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+
+    k⃗ = map(CuArray, k_vec([size(δ_r)...], box_size))
+    
+    δ_k = fft_plan * δ_r
+    
+    Ψ_k = similar(δ_k)
+    Ψ_r = similar(δ_r)
+    Ψ_interp = Tuple(zero(data_x) for _ in 1:3)
+    device  = KernelAbstractions.get_device(δ_k)
+    grad! = gradient_kernel!(device, 512)
+    inv_lap! = inv_laplace_kernel!(device, 512)
+    for i in 1:3
+        grad!(Ψ_k, k⃗, δ_k, i, ndrange = size(δ_k))
+        inv_lap!(Ψ_k, k⃗, ndrange = size(δ_k))
+        Ψ_k .* im
+        ldiv!(Ψ_r, fft_plan, Ψ_k)
+        read_cic!(Ψ_interp[i], Ψ_r, data_x, data_y, data_z, box_size, box_min)
+    end #for
+    Ψ_interp
+end #func
 
 
-function compute_displacements(δ_r::Array{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
 
     k⃗ = k_vec([size(δ_r)...], box_size)
     
@@ -155,7 +181,7 @@ function compute_displacements(δ_r::Array{T, 3}, data_x::AbstractVector{T}, dat
     
     Ψ_k = similar(δ_k)
     Ψ_r = similar(δ_r)
-    Ψ_interp = Tuple(zeros(T, size(data_x)...) for _ in 1:3)
+    Ψ_interp = Tuple(zero(data_x) for _ in 1:3)
     for i in 1:3
         for I in CartesianIndices(δ_k)
             k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
