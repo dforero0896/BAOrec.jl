@@ -30,11 +30,7 @@ recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0,
                               los = los)
 
 BAOrec.setup_fft!(recon, rho)                              
-@time BAOrec.preallocate_memory(recon, size(rho))
-recon
-@time BAOrec.cic!(rho, cu(data[1,:]), cu(data[2,:]), cu(data[3,:]), cu(data_w), recon.box_size, recon.box_min)
-fill!(rho, 0)
-@time BAOrec.cic!(rho, cu(data[1,:]), cu(data[2,:]), cu(data[3,:]), cu(data_w), recon.box_size, recon.box_min)
+
 
 @time BAOrec.setup_overdensity!(rho,
                         recon,
