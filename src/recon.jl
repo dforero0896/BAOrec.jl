@@ -58,11 +58,14 @@ function setup_overdensity!(δ_r_dat::AbstractArray{T, 3},
     δ_r_ran_sum = sum(δ_r_ran)
     α = δ_r_dat_sum / δ_r_ran_sum
     threshold = ran_min * δ_r_ran_sum / size(rand_x, 1) #should this be sum(rand_w)?
-    #@. δ_r_dat -= α * δ_r_ran
-    for I in CartesianIndices(δ_r_dat)
-        δ_r_dat[I] -= α * δ_r_ran[I]
-        δ_r_dat[I] = δ_r_ran[I] > threshold ? δ_r_dat[I] / (recon.bias * α * δ_r_ran[I]) : 0
-    end #for
+    # Avoid writing a separate kernel and function for CuArrays
+    # In principle Julia should fuse the loops anyway
+    @. δ_r_dat -= α * δ_r_ran
+    @. δ_r_dat =  ifelse(δ_r_ran > threshold, δ_r_dat / (recon.bias * α * δ_r_ran), 0)
+    #for I in CartesianIndices(δ_r_dat)
+    #    δ_r_dat[I] -= α * δ_r_ran[I]
+    #    δ_r_dat[I] = δ_r_ran[I] > threshold ? δ_r_dat[I] / (recon.bias * α * δ_r_ran[I]) : 0
+    #end #for
     δ_r_dat
 end
 

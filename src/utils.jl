@@ -59,8 +59,6 @@ function smooth!(field::CuArray{T, 3}, smoothing_radius::T, box_size::SVector{3,
     
     field_k = fft_plan * field
     k⃗ = map(CuArray, k_vec([size(field)...], box_size))
-    #k² = typeof(field)([k⃗[1][i]^2 + k⃗[2][j]^2 + k⃗[3][k]^2 for i in eachindex(k⃗[1]), j in eachindex(k⃗[2]), k in eachindex(k⃗[3])])
-    #@. field_k *= exp(-0.5 * smoothing_radius^2 * k²)
     device = KernelAbstractions.get_device(field_k)
     kernel! = gaussian_filter_kernel!(device, 256)
     ev = kernel!(field_k, k⃗..., smoothing_radius, ndrange = size(field_k))

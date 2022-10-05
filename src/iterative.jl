@@ -109,10 +109,12 @@ function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVe
                 
                 
                 #@. ∂Ψj_∂xi_k = k⃗[i] * k⃗[j] * δ_k
-                hessian!(∂Ψj_∂xi_k, k⃗, δ_k, i, j, ndrange = size(δ_k))
+                ev = hessian!(∂Ψj_∂xi_k, k⃗, δ_k, i, j, ndrange = size(δ_k))
+                wait(ev)
                 ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
-                hessian!(∂Ψj_∂xi_x, x⃗, ∂Ψj_∂xi_x, i, j, ndrange = size(δ_r)) #mult by xi xj
-                inv_lap!(∂Ψj_∂xi_x, x⃗, ndrange = size(δ_r)) # divide by x^2
+                ev = hessian!(∂Ψj_∂xi_x, x⃗, ∂Ψj_∂xi_x, i, j, ndrange = size(δ_r)) #mult by xi xj
+                ev = inv_lap!(∂Ψj_∂xi_x, x⃗, ndrange = size(δ_r), dependencies = ev) # divide by x^2
+                wait(ev)
                 @. δ_r = δ_r -  factor * ∂Ψj_∂xi_x
                 #@. δ_r = ifelse(x² > 0, δ_r -  factor * ∂Ψj_∂xi_x * x⃗[i] * x⃗[j] / x², 0)
 
@@ -129,11 +131,10 @@ function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVe
             factor = iter == 1 ? factor / (1 + β) : factor
             
             #@. ∂Ψj_∂xi_k = k⃗[i]^2 * r̂[i] * δ_k
-            hessian!(∂Ψj_∂xi_k, k⃗, δ_k, i, i, ndrange = size(δ_k))
+            ev = hessian!(∂Ψj_∂xi_k, k⃗, δ_k, i, i, ndrange = size(δ_k))
+            wait(ev)
             @. ∂Ψj_∂xi_k *= r̂[i]            
-
             ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
-
             @. δ_r = δ_r - factor * ∂Ψj_∂xi_x
 
 
@@ -163,8 +164,9 @@ function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, d
     grad! = gradient_kernel!(device, 512)
     inv_lap! = inv_laplace_kernel!(device, 512)
     for i in 1:3
-        grad!(Ψ_k, k⃗, δ_k, i, ndrange = size(δ_k))
-        inv_lap!(Ψ_k, k⃗, ndrange = size(δ_k))
+        ev = grad!(Ψ_k, k⃗, δ_k, i, ndrange = size(δ_k))
+        ev = inv_lap!(Ψ_k, k⃗, ndrange = size(δ_k), dependencies = ev)
+        wait(ev)
         Ψ_k .* im
         ldiv!(Ψ_r, fft_plan, Ψ_k)
         read_cic!(Ψ_interp[i], Ψ_r, data_x, data_y, data_z, box_size, box_min)
