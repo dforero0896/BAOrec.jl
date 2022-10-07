@@ -106,6 +106,86 @@ function cic!(ρ::CuArray{T, 3}, data_x::CuArray{T}, data_y::CuArray{T}, data_z:
     ρ
 end
 
+function is_in_range(point, ranges)
+    all([(p[1] > p[2].start) & (p[1] < p[2].stop) for p in zip(point, ranges)])
+end #funcs
+
+function cic!(ρ::OffsetArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
+
+    
+    n_bins = size_global(parent(ρ))
+    local_range = range_local(parent(ρ))
+    for i in eachindex(data_x)
+
+        if wrap
+            data_x[i] = (data_x[i] - box_min[1]) > box_size[1] ?  data_x[i] - box_size[1] : data_x[i]
+            data_y[i] = (data_y[i] - box_min[1]) > box_size[1] ?  data_y[i] - box_size[1] : data_y[i]
+            data_z[i] = (data_z[i] - box_min[1]) > box_size[1] ?  data_z[i] - box_size[1] : data_z[i]
+        end #if
+
+        x::T = (data_x[i] - box_min[1]) * n_bins[1] / box_size[1] + 1
+        y::T = (data_y[i] - box_min[2]) * n_bins[2] / box_size[2] + 1
+        z::T = (data_z[i] - box_min[3]) * n_bins[3] / box_size[3] + 1
+        #@show box_min
+        x0::Int = Int(floor(x))
+        y0::Int = Int(floor(y))
+        z0::Int = Int(floor(z))
+
+        wx1::T = x - x0
+        wx0::T = 1 - wx1
+        wy1::T = y - y0
+        wy0::T = 1 - wy1
+        wz1::T = z - z0
+        wz0::T = 1 - wz1
+
+        x0 = (x0 == n_bins[1]+1) ? 1 : x0
+        y0 = (y0 == n_bins[2]+1) ? 1 : y0
+        z0 = (z0 == n_bins[3]+1) ? 1 : z0
+
+
+        x1 = (x0 == n_bins[1]) & wrap ? 1 : x0 + 1
+        y1 = (y0 == n_bins[2]) & wrap ? 1 : y0 + 1
+        z1 = (z0 == n_bins[3]) & wrap ? 1 : z0 + 1
+
+        
+
+        wx0 *= data_w[i]
+        wx1 *= data_w[i]
+        #@show x0,y0,z0
+        #@show x1,y1,z1
+
+        
+        
+        if is_in_range((x0,y0,z0), local_range) 
+            ρ[x0,y0,z0] += wx0 * wy0 * wz0
+        end #if
+        if is_in_range((x1,y0,z0), local_range) 
+            ρ[x1,y0,z0] += wx1 * wy0 * wz0
+        end #if
+        if is_in_range((x0,y1,z0), local_range) 
+            ρ[x0,y1,z0] += wx0 * wy1 * wz0
+        end #if
+        if is_in_range((x0,y0,z1), local_range) 
+            ρ[x0,y0,z1] += wx0 * wy0 * wz1
+        end #if
+        if is_in_range((x1,y1,z0), local_range) 
+            ρ[x1,y1,z0] += wx1 * wy1 * wz0
+        end #if
+        if is_in_range((x1,y0,z1), local_range) 
+            ρ[x1,y0,z1] += wx1 * wy0 * wz1
+        end #if
+        if is_in_range((x0,y1,z1), local_range) 
+            ρ[x0,y1,z1] += wx0 * wy1 * wz1
+        end #if
+        if is_in_range((x1,y1,z1), local_range) 
+            ρ[x1,y1,z1] += wx1 * wy1 * wz1
+        end #if
+    end #for
+    ρ
+end
+
+
+
 function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
 
     dims = size(field)

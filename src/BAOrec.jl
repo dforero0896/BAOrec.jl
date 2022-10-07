@@ -11,6 +11,11 @@ using Interpolations
 using CUDA
 using KernelAbstractions
 using CUDAKernels
+using PencilArrays
+using PencilFFTs
+using MPI
+using OffsetArrays
+
 
 export IterativeRecon, setup_overdensity!,
         reconstructed_overdensity!, k_vec, x_vec,

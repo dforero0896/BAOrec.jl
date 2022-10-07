@@ -17,6 +17,9 @@ end #struct
 function setup_fft!(recon::IterativeRecon, field::AbstractArray)
     recon.fft_plan = plan_rfft(field)
 end #func
+function setup_fft!(recon::IterativeRecon, field::PencilArray)
+    recon.fft_plan = PencilFFTPlan(field.pencil, Transforms.RFFT())
+end #func
     
 function setup_overdensity!(δ_r::AbstractArray{T, 3},
                             recon::IterativeRecon,

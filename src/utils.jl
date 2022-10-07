@@ -28,10 +28,11 @@ function rho_to_delta!(ρ::Array{T, 3}) where T <: Real
     ρ
 end #func
 
-function smooth!(field::Array{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
+function smooth!(field::AbstractArray{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
 
     
     field_k = fft_plan * field
+    println("FFT done")
     k⃗ = k_vec([size(field)...], box_size)
     for I in CartesianIndices(field_k)
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
@@ -40,6 +41,21 @@ function smooth!(field::Array{T, 3}, smoothing_radius::T, box_size::SVector{3,T}
     ldiv!(field, fft_plan, field_k)
     field
 end #func
+
+
+#function smooth!(field::OffsetArray{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
+#
+#    
+#    field_k = fft_plan * field
+#    println("FFT done")
+#    k⃗ = k_vec([size(field)...], box_size)
+#    for I in CartesianIndices(field_k)
+#        k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
+#        field_k[I] *= exp(-0.5 * smoothing_radius^2 * k²)
+#    end #for
+#    ldiv!(field, fft_plan, field_k)
+#    field
+#end #func
 
 
 @kernel function laplace_kernel!(out_field, @Const(k⃗), @Const(field))
@@ -67,6 +83,8 @@ function smooth!(field::CuArray{T, 3}, smoothing_radius::T, box_size::SVector{3,
     field
 end #func
 
+
+
 function setup_box(pos_x, pos_y, pos_z, box_pad)
 
     data = (pos_x, pos_y, pos_z)
@@ -75,5 +93,15 @@ function setup_box(pos_x, pos_y, pos_z, box_pad)
     box_size = @SVector [maximum(box_max .- box_min) for _ in 1:3]
 
     box_size, box_min
+
+end #func
+
+function filter_array_mpi(data::AbstractVector{T}, field::PencilArray{T}, box_size::SVector{3,T}) where T <: AbstractFloat
+
+    ranges = range_local(field)
+    dims = size_global(field.pencil)
+
+    #data = data[:,mapslices(pos -> all([pos[i]<box_size[i] for i in eachindex(pos)]), data, dims=1)']
+    
 
 end #func
