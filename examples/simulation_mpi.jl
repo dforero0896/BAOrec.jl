@@ -8,10 +8,11 @@ using Statistics
 using MPI
 using PencilArrays
 using PencilFFTs
+using Random
 
 
 MPI.Init()
-test_fn = "/home/users/d/dforeros/.julia/dev/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.npy"
+test_fn = "/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.npy"
 
 n_grid = 512
 los = @SVector [0f0, 0f0, 1f0]
@@ -21,6 +22,13 @@ box_min = @SVector [0f0, 0f0, 0f0]
 data_w = ones(Float32, size(data,2))
 comm = MPI.COMM_WORLD
 pen = Pencil(Tuple(n_grid for _ in 1:3), comm)
+transform = Transforms.RFFT()
+plan = PencilFFTPlan(pen, transform)
+rho = allocate_input(plan)
+randn!(rho)
+@show summary(rho)
+rho_hat = plan * rho
+exit()
 rho_loc = PencilArray{Float32}(undef, pen);
 @show summary(rho_loc)
 @show typeof(pen)
@@ -36,7 +44,7 @@ BAOrec.setup_fft!(recon, parent(rho))
 ranges = range_local(parent(rho))
 
 #BAOrec.cic!(rho, view(data, 1,:), view(data, 2,:), view(data, 3,:), data_w, recon.box_size,  recon.box_min; wrap = true)
-recon.fft_plan * rho
+recon.fft_plan * parent(rho)
 exit()
 
 @time BAOrec.setup_overdensity!(rho,
