@@ -107,14 +107,15 @@ function cic!(ρ::CuArray{T, 3}, data_x::CuArray{T}, data_y::CuArray{T}, data_z:
 end
 
 function is_in_range(point, ranges)
-    all([(p[1] > p[2].start) & (p[1] < p[2].stop) for p in zip(point, ranges)])
+    all([(p[1] >= p[2].start) & (p[1] <= p[2].stop) for p in zip(point, ranges)])
 end #funcs
 
-function cic!(ρ::OffsetArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
+function cic!(ρ::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, data_w::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap::Bool = true) where T<:Real
 
     
-    n_bins = size_global(parent(ρ))
-    local_range = range_local(parent(ρ))
+    n_bins = size_global(ρ)
+    local_range = range_local(ρ)
+    ρ_global = global_view(ρ)
     for i in eachindex(data_x)
 
         if wrap
@@ -157,28 +158,28 @@ function cic!(ρ::OffsetArray{T, 3}, data_x::AbstractVector{T}, data_y::Abstract
         
         
         if is_in_range((x0,y0,z0), local_range) 
-            ρ[x0,y0,z0] += wx0 * wy0 * wz0
+            ρ_global[x0,y0,z0] += wx0 * wy0 * wz0
         end #if
         if is_in_range((x1,y0,z0), local_range) 
-            ρ[x1,y0,z0] += wx1 * wy0 * wz0
+            ρ_global[x1,y0,z0] += wx1 * wy0 * wz0
         end #if
         if is_in_range((x0,y1,z0), local_range) 
-            ρ[x0,y1,z0] += wx0 * wy1 * wz0
+            ρ_global[x0,y1,z0] += wx0 * wy1 * wz0
         end #if
         if is_in_range((x0,y0,z1), local_range) 
-            ρ[x0,y0,z1] += wx0 * wy0 * wz1
+            ρ_global[x0,y0,z1] += wx0 * wy0 * wz1
         end #if
         if is_in_range((x1,y1,z0), local_range) 
-            ρ[x1,y1,z0] += wx1 * wy1 * wz0
+            ρ_global[x1,y1,z0] += wx1 * wy1 * wz0
         end #if
         if is_in_range((x1,y0,z1), local_range) 
-            ρ[x1,y0,z1] += wx1 * wy0 * wz1
+            ρ_global[x1,y0,z1] += wx1 * wy0 * wz1
         end #if
         if is_in_range((x0,y1,z1), local_range) 
-            ρ[x0,y1,z1] += wx0 * wy1 * wz1
+            ρ_global[x0,y1,z1] += wx0 * wy1 * wz1
         end #if
         if is_in_range((x1,y1,z1), local_range) 
-            ρ[x1,y1,z1] += wx1 * wy1 * wz1
+            ρ_global[x1,y1,z1] += wx1 * wy1 * wz1
         end #if
     end #for
     ρ
@@ -280,4 +281,62 @@ function read_cic!(output::CuArray{T}, field::CuArray{T, 3}, data_x::CuArray{T},
     ev = kernel!(output, field, data_x, data_y, data_z, box_size, box_min, dims, wrap, ndrange = size(data_x))
     wait(ev)
 
+end #func
+
+function read_cic!(output::AbstractVector{T}, field::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}; wrap = true )  where T <: Real
+
+    dims = size_global(field)
+    local_range = range_local(field)
+    cell_size = map(T, box_size ./ dims)
+    u = zeros(T, 3)
+    d = zeros(T, 3)
+    index_u = zeros(Int, 3)
+    index_d = zeros(Int, 3)
+    data = (data_x, data_y, data_z)
+    for i in eachindex(data_x)
+        for j in 1:3
+            dist = (data[j][i] - box_min[j]) / cell_size[j]
+            dist_i = Int(floor(dist)) 
+            u[j] = dist - dist_i
+            d[j] = 1 - u[j]
+            dist_i += 1
+            index_d[j] = (dist_i > dims[j]) & wrap ? dist_i - dims[j] : dist_i
+            index_u[j] = index_d[j] + 1
+            index_u[j] = (index_u[j] > dims[j]) & wrap ? index_u[j] - dims[j] : index_u[j]
+        end #for 
+        output[i] = 0
+        if is_in_range((index_d[1], index_d[2], index_d[3]), local_range)
+            output[i] += field[index_d[1], index_d[2], index_d[3]] * d[1] * d[2] * d[3]
+        end #if
+
+        if is_in_range((index_d[1], index_d[2], index_u[3]), local_range)
+            output[i] += field[index_d[1], index_d[2], index_u[3]] * d[1] * d[2] * u[3]
+        end #if
+
+        if is_in_range((index_d[1], index_u[2], index_d[3]), local_range)
+            output[i] += field[index_d[1], index_u[2], index_d[3]] * d[1] * u[2] * d[3]
+        end #if
+
+        if is_in_range((index_d[1], index_u[2], index_u[3]), local_range)
+            output[i] += field[index_d[1], index_u[2], index_u[3]] * d[1] * u[2] * u[3]
+        end #if
+
+        if is_in_range((index_u[1], index_d[2], index_d[3]), local_range)
+            output[i] += field[index_u[1], index_d[2], index_d[3]] * u[1] * d[2] * d[3]
+        end #if
+
+        if is_in_range((index_u[1], index_d[2], index_u[3]), local_range)
+            output[i] += field[index_u[1], index_d[2], index_u[3]] * u[1] * d[2] * u[3]
+        end #if
+
+        if is_in_range((index_u[1], index_u[2], index_d[3]), local_range)
+            output[i] += field[index_u[1], index_u[2], index_d[3]] * u[1] * u[2] * d[3]
+        end #if
+
+        if is_in_range((index_u[1], index_u[2], index_u[3]), local_range)
+            output[i] += field[index_u[1], index_u[2], index_u[3]] * u[1] * u[2] * u[3]
+        end #if
+                                
+    end #for
+    output
 end #func

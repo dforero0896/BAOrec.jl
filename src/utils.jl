@@ -1,7 +1,7 @@
 
 
-function k_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}) where T<:Real
-
+function k_vec(field::AbstractArray, box_size::SVector{3,T}) where T<:Real
+    dims = [size(field)...]
     sample_rate = map(T, 2π .* dims ./ box_size)
     kx = rfftfreq(dims[1], sample_rate[1])
     ky = fftfreq(dims[2], sample_rate[2])
@@ -9,14 +9,28 @@ function k_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}) where T<:Real
     (kx, ky, kz)
 end #func
 
-function x_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}, box_min::SVector{3,T}) where T<:Real
-    
-    cell_size = map(T, box_size ./ dims)
-    Tuple(collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i]) for i in 1:3)
-    #Tuple(collect(box_min[i] .+ cell_size[i] .* range(0, dims[i] - 1)) for i in 1:3)
+function k_vec(field::PencilArray, box_size::SVector{3,T}) where T<:Real
+    dims = [size_global(field)...]
+    sample_rate = map(T, 2π .* dims ./ box_size)
+    kx = rfftfreq(dims[1], sample_rate[1])
+    ky = fftfreq(dims[2], sample_rate[2])
+    kz = fftfreq(dims[3], sample_rate[3])
+    (kx, ky, kz)
 end #func
 
-x_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}) where T<:Real = x_vec(dims::AbstractVector{Int}, box_size::SVector{3,T}, @SVector [T(0), T(0), T(0)])
+function x_vec(field::AbstractArray, box_size::SVector{3,T}, box_min::SVector{3,T}) where T<:Real
+    dims = [size(field)...]
+    cell_size = map(T, box_size ./ dims)
+    Tuple(collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i]) for i in 1:3)
+end #func
+
+
+function x_vec(field::PencilArray, box_size::SVector{3,T}, box_min::SVector{3,T}) where T<:Real
+    dims = [size_global(field)...]
+    cell_size = map(T, box_size ./ dims)
+    Tuple(collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i]) for i in 1:3)
+end #func
+
 
 function rho_to_delta!(ρ::Array{T, 3}) where T <: Real
     
@@ -32,8 +46,7 @@ function smooth!(field::AbstractArray{T, 3}, smoothing_radius::T, box_size::SVec
 
     
     field_k = fft_plan * field
-    println("FFT done")
-    k⃗ = k_vec([size(field)...], box_size)
+    k⃗ = k_vec(field, box_size)
     for I in CartesianIndices(field_k)
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
         field_k[I] *= exp(-0.5 * smoothing_radius^2 * k²)
@@ -43,19 +56,18 @@ function smooth!(field::AbstractArray{T, 3}, smoothing_radius::T, box_size::SVec
 end #func
 
 
-#function smooth!(field::OffsetArray{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
-#
-#    
-#    field_k = fft_plan * field
-#    println("FFT done")
-#    k⃗ = k_vec([size(field)...], box_size)
-#    for I in CartesianIndices(field_k)
-#        k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
-#        field_k[I] *= exp(-0.5 * smoothing_radius^2 * k²)
-#    end #for
-#    ldiv!(field, fft_plan, field_k)
-#    field
-#end #func
+function smooth!(field::PencilArray{T, 3}, smoothing_radius::T, box_size::SVector{3,T}, fft_plan) where T <: Real
+    
+    field_k = fft_plan * field
+    field_global_k = global_view(field_k)
+    k⃗ = k_vec(field, box_size)
+    for I in CartesianIndices(field_global_k)
+        k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
+        field_global_k[I] *= exp(-0.5 * smoothing_radius^2 * k²)
+    end #for
+    ldiv!(field, fft_plan, field_k)
+    field
+end #func
 
 
 @kernel function laplace_kernel!(out_field, @Const(k⃗), @Const(field))
@@ -74,7 +86,7 @@ function smooth!(field::CuArray{T, 3}, smoothing_radius::T, box_size::SVector{3,
 
     
     field_k = fft_plan * field
-    k⃗ = map(CuArray, k_vec([size(field)...], box_size))
+    k⃗ = map(CuArray, k_vec(field, box_size))
     device = KernelAbstractions.get_device(field_k)
     kernel! = gaussian_filter_kernel!(device, 256)
     ev = kernel!(field_k, k⃗..., smoothing_radius, ndrange = size(field_k))
@@ -96,12 +108,3 @@ function setup_box(pos_x, pos_y, pos_z, box_pad)
 
 end #func
 
-function filter_array_mpi(data::AbstractVector{T}, field::PencilArray{T}, box_size::SVector{3,T}) where T <: AbstractFloat
-
-    ranges = range_local(field)
-    dims = size_global(field.pencil)
-
-    #data = data[:,mapslices(pos -> all([pos[i]<box_size[i] for i in eachindex(pos)]), data, dims=1)']
-    
-
-end #func

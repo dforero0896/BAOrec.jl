@@ -83,13 +83,16 @@ data_cat_pos = sky_to_cartesian(values(data_cat[!,:ra]), values(data_cat[!,:dec]
 rand_cat_pos = sky_to_cartesian(values(rand_cat[!,:ra]), values(rand_cat[!,:dec]), values(rand_cat[!,:z]), cosmo)
 box_pad = 500f0
 box_size, box_min = BAOrec.setup_box(view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), box_pad)
-
 P0 = 5f3
 data_cat_w = values(data_cat[!,:w]) .* fkp_weights.(data_cat[!,:nz], Ref(P0))
 rand_cat_w = values(rand_cat[!,:w]) .* fkp_weights.(rand_cat[!,:nz], Ref(P0))
 
+data_cat_pos = map(cu, [data_cat_pos[i,:] for i in 1:3])
+rand_cat_pos = map(cu, [rand_cat_pos[i,:] for i in 1:3])
+data_cat_w, rand_cat_w = map(cu, (data_cat_w, rand_cat_w))
+
 n_grid = 512
-rho = cu(zeros(eltype(data_cat_pos), [n_grid for i in 1:3]...);)
+rho = cu(zeros(eltype(data_cat_pos[1]), [n_grid for i in 1:3]...))
 
 
 recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0, 
@@ -100,27 +103,32 @@ recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0,
 BAOrec.setup_fft!(recon, rho)
 @time BAOrec.setup_overdensity!(rho,
                               recon,
-                              cu(data_cat_pos[1,:]), cu(data_cat_pos[2,:]), cu(data_cat_pos[3,:]), cu(data_cat_w),
-                              cu(rand_cat_pos[1,:]), cu(rand_cat_pos[2,:]), cu(rand_cat_pos[3,:]), cu(rand_cat_w)
+                              data_cat_pos..., data_cat_w,
+                              rand_cat_pos..., rand_cat_w
                               );
-p3 = heatmap(dropdims(mean(Array(rho), dims=3), dims=3), aspect_ratio = :equal, c = :vik,)
+#p3 = heatmap(dropdims(mean(Array(rho), dims=3), dims=3), aspect_ratio = :equal, c = :vik,)
 
 fill!(rho, 0);
 @time BAOrec.reconstructed_overdensity!(rho,
                               recon,
-                              cu(data_cat_pos[1,:]), cu(data_cat_pos[2,:]), cu(data_cat_pos[3,:]), cu(data_cat_w),
-                              cu(rand_cat_pos[1,:]), cu(rand_cat_pos[2,:]), cu(rand_cat_pos[3,:]), cu(rand_cat_w)
+                              data_cat_pos..., data_cat_w,
+                              rand_cat_pos..., rand_cat_w
                               );
-p4 = heatmap(dropdims(mean(Array(rho), dims=3), dims=3), aspect_ratio = :equal, c = :vik)
+#p4 = heatmap(dropdims(mean(Array(rho), dims=3), dims=3), aspect_ratio = :equal, c = :vik)
 
-plot(p3, p4)
-savefig("/home/astro/dforero/codes/BAOrec/examples/lightcone_gpu.png")
-rho = Array(rho)
-recon.fft_plan = plan_rfft(rho)
+#plot(p3, p4)
+#savefig("/home/astro/dforero/codes/BAOrec/examples/lightcone_gpu.png")
 
-@time new_pos = BAOrec.reconstructed_positions(recon, view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:), rho; field = :sum);
-@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), rho; field = :sum);
-@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), rho; field = :disp);
+
+
+
+@time new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos..., rho; field = :sum);
+@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos..., rho; field = :sum);
+@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, rand_cat_pos..., rho; field = :disp);
+
+new_pos = map(Array, new_pos)
+new_rand_cat_sym = map(Array, new_rand_cat_sym)
+new_rand_cat_iso = map(Array, new_rand_cat_iso)
 
 
 @time new_pos = cartesian_to_sky(new_pos..., cosmo)

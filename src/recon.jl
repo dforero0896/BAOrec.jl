@@ -82,8 +82,8 @@ function reconstructed_overdensity!(δ_r::AbstractArray{T, 3},
     setup_overdensity!(δ_r, recon, data_x, data_y, data_z, data_w)
     
     δ_s = copy(δ_r)
-    kvec = k_vec([size(δ_r)...], recon.box_size)
-    xvec = los === nothing ? x_vec([size(δ_r)...], recon.box_size) : nothing
+    kvec = k_vec(δ_r, recon.box_size)
+    xvec = los === nothing ? x_vec(δ_r, recon.box_size) : nothing
     for niter in 1:recon.n_iter
         iterate!(δ_r, δ_s, kvec, niter, recon.β, recon.fft_plan; r̂ = los, x⃗ = xvec)
     end #for
@@ -104,8 +104,8 @@ function reconstructed_overdensity!(δ_r::AbstractArray{T, 3},
     setup_overdensity!(δ_r, recon, data_x, data_y, data_z, data_w, rand_x, rand_y, rand_z, rand_w)
 
     δ_s = copy(δ_r)
-    kvec = k_vec([size(δ_r)...], recon.box_size)
-    xvec = los === nothing ? x_vec([size(δ_r)...], recon.box_size, recon.box_min) : nothing
+    kvec = k_vec(δ_r, recon.box_size)
+    xvec = los === nothing ? x_vec(δ_r, recon.box_size, recon.box_min) : nothing
 
     for niter in 1:recon.n_iter
         iterate!(δ_r, δ_s, kvec, niter, recon.β, recon.fft_plan; r̂ = los, x⃗ = xvec)
@@ -121,8 +121,8 @@ function read_shifts(recon::AbstractRecon,
                     δ_r::AbstractArray{T, 3};
                     field = :disp, )  where T<:Real
     los = recon.los
-    displacements = map(Array, compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan))
-    data = map(Array, (data_x, data_y, data_z)) #This involves too much data-copying
+    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan)
+    data = (data_x, data_y, data_z) #This involves too much data-copying
     if field === :disp
         return displacements
     else
@@ -145,7 +145,65 @@ function read_shifts(recon::AbstractRecon,
                 end #for
             end #for
         end #if
+        if field === :rsd
+            return rsd
+        elseif field === :sum
+            for j in 1:3
+                displacements[j] .+= rsd[j]
+            end #for
+            return displacements
+        end #if
+    end #if          
+end #func
 
+@kernel function read_shifts_local_kernel!(rsd_x, rsd_y, rsd_z, displacements_x, displacements_y, displacements_z, data_x, data_y, data_z, los, f)
+
+    i = @index(Global, Linear)
+    dist = sqrt(data_x[i]^2 + data_y[i]^2 + data_z[i]^2)
+    
+    los_x = data_x[i] / dist
+    los_y = data_y[i] / dist
+    los_z = data_z[i] / dist
+    disp_dot_r = ((displacements_x[i] * los_x) + (displacements_y[i] * los_y) + (displacements_z[i] * los_z))
+    rsd_x[i] = f * disp_dot_r * los_x
+    rsd_y[i] = f * disp_dot_r * los_y
+    rsd_z[i] = f * disp_dot_r * los_z
+
+end #func
+
+@kernel function read_shifts_los_kernel!(rsd_x, rsd_y, rsd_z, displacements_x, displacements_y, displacements_z, data_x, data_y, data_z, los, f)
+
+    i = @index(Global, Linear)
+    disp_dot_r = ((displacements_x[i] * los[1]) + (displacements_y[i] * los[2]) + (displacements_z[i] * los[3]))
+    rsd_x[i] = f * disp_dot_r * los[1]
+    rsd_y[i] = f * disp_dot_r * los[2]
+    rsd_z[i] = f * disp_dot_r * los[3]   
+    
+end #func
+
+
+function read_shifts(recon::AbstractRecon,
+                    data_x::CuVector{T}, 
+                    data_y::CuVector{T}, 
+                    data_z::CuVector{T},
+                    δ_r::CuArray{T, 3};
+                    field = :disp, )  where T<:Real
+    los = recon.los
+    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan)
+    
+    if field === :disp
+        return displacements
+    else
+        rsd = Tuple(similar(d) for d in displacements)
+        if los === nothing
+            los = cu(zeros(T, 3))
+            kernel! = read_shifts_local_kernel!(KernelAbstractions.get_device(data_x), 512)
+        else #los provided
+            los = cu(los)
+            kernel! = read_shifts_los_kernel!(KernelAbstractions.get_device(data_x), 512)
+        end #if
+        ev = kernel!(rsd[1], rsd[2], rsd[3], displacements[1], displacements[2], displacements[3], data_x, data_y, data_z, los, recon.f, ndrange = length(data_x))
+        wait(ev)
         if field === :rsd
             return rsd
         elseif field === :sum
@@ -166,9 +224,10 @@ function reconstructed_positions(recon::AbstractRecon,
 
     displacements = read_shifts(recon, data_x, data_y, data_z, δ_r; field=field)
     data = (data_x, data_y, data_z)
-    data_rec = map(Array, Tuple(similar(d) for d in data))
+    #data_rec = map(Array, Tuple(similar(d) for d in data))
+    data_rec = Tuple(similar(d) for d in data)
     for i in 1:3
-        data_rec[i] .= Array(data[i]) .- displacements[i]
+        data_rec[i] .= data[i] .- displacements[i]
     end #for
     data_rec
 end #func
