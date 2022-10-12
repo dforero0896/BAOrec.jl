@@ -15,6 +15,7 @@ using PencilArrays
 using PencilFFTs
 using MPI
 using OffsetArrays
+using Zygote
 
 
 export IterativeRecon, setup_overdensity!,
@@ -25,6 +26,7 @@ include("utils.jl")
 include("recon.jl")
 include("mas.jl")
 include("iterative.jl")
+include("multigrid.jl")
 include("cosmo.jl")
 
 end

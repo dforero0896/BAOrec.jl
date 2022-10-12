@@ -162,8 +162,8 @@ function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVe
     k⃗ = map(CuArray, k⃗)
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
     device = KernelAbstractions.get_device(δ_k)
-    inv_lap! = inv_laplace_kernel!(device, 256)
-    hessian! = hessian_kernel!(device, 256)
+    inv_lap! = inv_laplace_kernel!(device)
+    hessian! = hessian_kernel!(device)
     ev = inv_lap!(δ_k, k⃗, ndrange = size(δ_k))
     wait(ev)
     #δ_k[1,1,1] = 0.
@@ -236,8 +236,11 @@ end #function
 
 
 
-function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
 
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
     k⃗ = map(CuArray, k_vec(δ_r, box_size))
     
     δ_k = fft_plan * δ_r
@@ -246,7 +249,7 @@ function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, d
     Ψ_r = similar(δ_r)
     Ψ_interp = Tuple(zero(data_x) for _ in 1:3)
     device  = KernelAbstractions.get_device(δ_k)
-    kernel! = displacement_kernel!(device, 512)
+    kernel! = displacement_kernel!(device)
     for i in 1:3
         ev = kernel!(Ψ_k, k⃗, δ_k, i, ndrange = size(δ_k))
         wait(ev)
@@ -257,8 +260,11 @@ function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, d
 end #func
 
 
-function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
 
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
     k⃗ = k_vec(δ_r, box_size)
     
     δ_k = fft_plan * δ_r
@@ -280,7 +286,11 @@ function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector
 end #func
 
 
-function compute_displacements(δ_r::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
+
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
 
     k⃗ = k_vec(δ_r, box_size)
     

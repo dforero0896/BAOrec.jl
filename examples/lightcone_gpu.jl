@@ -137,6 +137,6 @@ new_rand_cat_iso = map(Array, new_rand_cat_iso)
 
 
 
-npzwrite("/home/astro/dforero/codes/BAOrec/data/Patchy-Mocks-DR12NGC-COMPSAM_V6C_0001.dat.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
-npzwrite("/home/astro/dforero/codes/BAOrec/data/Patchy-Mocks-Randoms-DR12NGC-COMPSAM_V6C_x20.dat.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
-npzwrite("/home/astro/dforero/codes/BAOrec/data/Patchy-Mocks-Randoms-DR12NGC-COMPSAM_V6C_x20.dat.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_Patchy-Mocks-DR12NGC-COMPSAM_V6C_0001.dat.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_Patchy-Mocks-Randoms-DR12NGC-COMPSAM_V6C_x20.dat.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_Patchy-Mocks-Randoms-DR12NGC-COMPSAM_V6C_x20.dat.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))

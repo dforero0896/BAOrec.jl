@@ -14,15 +14,31 @@ abstract type AbstractRecon end
 
 end #struct
 
-function setup_fft!(recon::IterativeRecon, field::AbstractArray)
+@with_kw mutable struct MultigridRecon <: AbstractRecon
+
+    bias
+    f
+    smoothing_radius
+    box_size::SVector{3}
+    box_min::SVector{3}
+    los = nothing
+    jacobi_damping_factor = typeof(f)(0.4)
+    jacobi_niterations::Int = 5
+    vcycle_niterations::Int = 6
+    β = f / bias
+    fft_plan = nothing
+
+end #struct
+
+function setup_fft!(recon::AbstractRecon, field::AbstractArray)
     recon.fft_plan = plan_rfft(field)
 end #func
-function setup_fft!(recon::IterativeRecon, field::PencilArray)
+function setup_fft!(recon::AbstractRecon, field::PencilArray)
     recon.fft_plan = PencilFFTPlan(field.pencil, Transforms.RFFT())
 end #func
     
 function setup_overdensity!(δ_r::AbstractArray{T, 3},
-                            recon::IterativeRecon,
+                            recon::AbstractRecon,
                             data_x::AbstractVector{T}, 
                             data_y::AbstractVector{T}, 
                             data_z::AbstractVector{T}, 
@@ -40,7 +56,7 @@ end
 
 
 function setup_overdensity!(δ_r_dat::AbstractArray{T, 3},
-                            recon::IterativeRecon,
+                            recon::AbstractRecon,
                             data_x::AbstractVector{T}, 
                             data_y::AbstractVector{T}, 
                             data_z::AbstractVector{T}, 
@@ -83,7 +99,7 @@ function reconstructed_overdensity!(δ_r::AbstractArray{T, 3},
     
     δ_s = copy(δ_r)
     kvec = k_vec(δ_r, recon.box_size)
-    xvec = los === nothing ? x_vec(δ_r, recon.box_size) : nothing
+    xvec = los === nothing ? x_vec(δ_r, recon.box_size, recon.box_min) : nothing
     for niter in 1:recon.n_iter
         iterate!(δ_r, δ_s, kvec, niter, recon.β, recon.fft_plan; r̂ = los, x⃗ = xvec)
     end #for
@@ -113,6 +129,35 @@ function reconstructed_overdensity!(δ_r::AbstractArray{T, 3},
     δ_r
 end #func
 
+function reconstructed_potential!(ϕ::AbstractArray{T,3},
+                                  recon::MultigridRecon,
+                                  data_x::AbstractVector{T}, 
+                                  data_y::AbstractVector{T}, 
+                                  data_z::AbstractVector{T}, 
+                                  data_w::AbstractVector{T}) where T <: Real
+    los = recon.los
+    δ = zero(ϕ)
+    setup_overdensity!(δ, recon, data_x, data_y, data_z, data_w)                        
+    fmg(δ, ϕ, recon.box_size, recon.box_min, recon.β, recon.jacobi_damping_factor, recon.jacobi_niterations, recon.vcycle_niterations, los = recon.los)
+    ϕ
+end #func
+
+function reconstructed_potential!(ϕ::AbstractArray{T,3},
+                                  recon::MultigridRecon,
+                                  data_x::AbstractVector{T}, 
+                                  data_y::AbstractVector{T}, 
+                                  data_z::AbstractVector{T}, 
+                                  data_w::AbstractVector{T},
+                                  rand_x::AbstractVector{T}, 
+                                  rand_y::AbstractVector{T}, 
+                                  rand_z::AbstractVector{T}, 
+                                  rand_w::AbstractVector{T};) where T <: Real
+    los = recon.los
+    δ = zero(ϕ)
+    setup_overdensity!(δ_r, recon, data_x, data_y, data_z, data_w, rand_x, rand_y, rand_z, rand_w)                     
+    fmg(δ, ϕ, recon.box_size, recon.box_min, recon.β, recon.jacobi_damping_factor, recon.jacobi_niterations, recon.vcycle_niterations, los = recon.los)
+    ϕ
+end #func
 
 function read_shifts(recon::AbstractRecon,
                     data_x::AbstractVector{T}, 
@@ -121,7 +166,7 @@ function read_shifts(recon::AbstractRecon,
                     δ_r::AbstractArray{T, 3};
                     field = :disp, )  where T<:Real
     los = recon.los
-    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan)
+    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon)
     data = (data_x, data_y, data_z) #This involves too much data-copying
     if field === :disp
         return displacements
@@ -129,7 +174,7 @@ function read_shifts(recon::AbstractRecon,
         rsd = Tuple(similar(d) for d in displacements)
         if los === nothing
             los = zeros(T, 3)
-            for i in eachindex(data_x)
+            Threads.@threads for i in eachindex(data_x)
                 dist = sqrt(data_x[i]^2 + data_y[i]^2 + data_z[i]^2)
                 for j in 1:3
                     los[j] = data[j][i] / dist
@@ -139,7 +184,7 @@ function read_shifts(recon::AbstractRecon,
                 end #for
             end #for
         else #los provided
-            for i in eachindex(data_x)
+            Threads.@threads for i in eachindex(data_x)
                 for j in 1:3
                     rsd[j][i] = recon.f * sum([displacements[l][i] * los[l] for l in 1:3]) * los[j] 
                 end #for
@@ -189,7 +234,7 @@ function read_shifts(recon::AbstractRecon,
                     δ_r::CuArray{T, 3};
                     field = :disp, )  where T<:Real
     los = recon.los
-    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon.box_size, recon.box_min, recon.fft_plan)
+    displacements = compute_displacements(δ_r, data_x, data_y, data_z, recon)
     
     if field === :disp
         return displacements
@@ -224,7 +269,6 @@ function reconstructed_positions(recon::AbstractRecon,
 
     displacements = read_shifts(recon, data_x, data_y, data_z, δ_r; field=field)
     data = (data_x, data_y, data_z)
-    #data_rec = map(Array, Tuple(similar(d) for d in data))
     data_rec = Tuple(similar(d) for d in data)
     for i in 1:3
         data_rec[i] .= data[i] .- displacements[i]
@@ -232,7 +276,7 @@ function reconstructed_positions(recon::AbstractRecon,
     data_rec
 end #func
 
-function preallocate_memory(recon::AbstractRecon, n_bins)
+function preallocate_memory(recon::IterativeRecon, n_bins)
     
     out = Dict()
     out[:δ_r] = zeros(typeof(recon.bias), n_bins...)
