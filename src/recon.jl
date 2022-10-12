@@ -154,7 +154,7 @@ function reconstructed_potential!(ϕ::AbstractArray{T,3},
                                   rand_w::AbstractVector{T};) where T <: Real
     los = recon.los
     δ = zero(ϕ)
-    setup_overdensity!(δ_r, recon, data_x, data_y, data_z, data_w, rand_x, rand_y, rand_z, rand_w)                     
+    setup_overdensity!(δ, recon, data_x, data_y, data_z, data_w, rand_x, rand_y, rand_z, rand_w)                     
     fmg(δ, ϕ, recon.box_size, recon.box_min, recon.β, recon.jacobi_damping_factor, recon.jacobi_niterations, recon.vcycle_niterations, los = recon.los)
     ϕ
 end #func
