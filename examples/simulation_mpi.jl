@@ -35,6 +35,18 @@ recon.fft_plan = PencilFFTPlan(pen, transform, Float32)
 rho_loc = allocate_input(recon.fft_plan)
 fill!(rho_loc,0);
 rho = global_view(rho_loc)
+if mpi_rank == 0
+    for i in 1:mpi_size
+        @show range_remote(rho_loc, i)
+    end #for
+    
+end #if
+
+BAOrec.send_to_relevant_process([10,10,10], rho_loc, 10., mpi_size, mpi_rank, comm)
+MPI.Barrier(comm)
+
+
+exit()
 
 BAOrec.cic!(rho_loc, view(data, 1,:), view(data, 2,:), view(data, 3,:), data_w, recon.box_size,  recon.box_min; wrap = true)
 #

@@ -20,15 +20,15 @@ end #func
 
 function x_vec(field::AbstractArray, box_size::SVector{3,T}, box_min::SVector{3,T}) where T<:Real
     dims = [size(field)...]
-    cell_size = map(T, box_size ./ dims)
-    Tuple(collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i]) for i in 1:3)
+    cell_size = box_size ./ dims
+    Tuple(map(T, collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i])) for i in 1:3)
 end #func
 
 
 function x_vec(field::PencilArray, box_size::SVector{3,T}, box_min::SVector{3,T}) where T<:Real
     dims = [size_global(field)...]
     cell_size = map(T, box_size ./ dims)
-    Tuple(collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i]) for i in 1:3)
+    Tuple(map(T, collect(box_min[i] + 0.5 * cell_size[i]:cell_size[i]:box_min[i] + box_size[i])) for i in 1:3)
 end #func
 
 
@@ -88,7 +88,7 @@ function smooth!(field::CuArray{T, 3}, smoothing_radius::T, box_size::SVector{3,
     field_k = fft_plan * field
     k⃗ = map(CuArray, k_vec(field, box_size))
     device = KernelAbstractions.get_device(field_k)
-    kernel! = gaussian_filter_kernel!(device, 256)
+    kernel! = gaussian_filter_kernel!(device)
     ev = kernel!(field_k, k⃗..., smoothing_radius, ndrange = size(field_k))
     wait(ev)
     ldiv!(field, fft_plan, field_k)
