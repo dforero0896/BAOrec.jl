@@ -616,7 +616,7 @@ function compute_displacements(ϕ::AbstractArray{T, 3}, data_x::AbstractVector{T
     ∂ᵢϕ = similar(ϕ)
     kᵢϕ = similar(ϕ_k)
     for i in 1:3
-        for I in CartesianIndices(ϕ_k)
+        Threads.@threads for I in CartesianIndices(ϕ_k)
             kᵢϕ[I] = im * k⃗[i][I[i]] * ϕ_k[I]
         end #for
         ldiv!(∂ᵢϕ, fft_plan, kᵢϕ)

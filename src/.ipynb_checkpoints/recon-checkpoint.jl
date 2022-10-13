@@ -4,13 +4,12 @@ abstract type AbstractRecon end
     bias
     f
     smoothing_radius
-    box_size = nothing
-    box_min = nothing
+    box_size::SVector{3}
+    box_min::SVector{3}
     los = nothing
     n_iter::Int = 3
     β = f / bias
     fft_plan = nothing
-    result_cache = nothing #For iterative the recon result is the overdensity in real space
     
 
 end #struct
@@ -20,15 +19,14 @@ end #struct
     bias
     f
     smoothing_radius
-    box_size = nothing
-    box_min = nothing
+    box_size::SVector{3}
+    box_min::SVector{3}
     los = nothing
     jacobi_damping_factor = typeof(f)(0.4)
     jacobi_niterations::Int = 5
     vcycle_niterations::Int = 6
     β = f / bias
     fft_plan = nothing
-    result_cache = nothing #For multigrid recon the result is the reconstruction potential field.
 
 end #struct
 
@@ -131,56 +129,6 @@ function reconstructed_overdensity!(δ_r::AbstractArray{T, 3},
     δ_r
 end #func
 
-function run!(recon::IterativeRecon,
-            grid_size::Tuple{Int, Int, Int},
-            data_x::AbstractVector{T}, 
-            data_y::AbstractVector{T}, 
-            data_z::AbstractVector{T}, 
-            data_w::AbstractVector{T}) where T <: Real
-
-    if typeof(data_x) <: CuArray
-        δ = CuArray{eltype(data_x), 3}(undef, grid_size...)
-        fill!(δ, 0)
-    else
-        δ = zeros(eltype(data_x), grid_size...);
-    end #if
-    setup_fft!(recon, δ)
-    reconstructed_overdensity!(δ,
-                              recon,
-                              data_x, data_y, data_z, data_w, 
-                              );
-    recon.result_cache = δ
-end #func
-
-function run!(recon::IterativeRecon,
-                grid_size::Tuple{Int, Int, Int},
-                data_x::AbstractVector{T}, 
-                data_y::AbstractVector{T}, 
-                data_z::AbstractVector{T}, 
-                data_w::AbstractVector{T},
-                rand_x::AbstractVector{T}, 
-                rand_y::AbstractVector{T}, 
-                rand_z::AbstractVector{T}, 
-                rand_w::AbstractVector{T};) where T <: Real
-
-    if typeof(data_x) <: CuArray
-        δ = CuArray{eltype(data_x), 3}(undef, grid_size...)
-        fill!(δ, 0)
-    else
-        δ = zeros(eltype(data_x), grid_size...);
-    end #if
-    recon.box_size, recon.box_min = BAOrec.setup_box(rand_x, rand_y, rand_z, T(500))
-    setup_fft!(recon, δ)
-    reconstructed_overdensity!(δ,
-                              recon,
-                              data_x, data_y, data_z, data_w, 
-                              rand_x, rand_y, rand_z, rand_w, 
-                              );
-    recon.result_cache = δ
-end #func
-
-
-
 function reconstructed_potential!(ϕ::AbstractArray{T,3},
                                   recon::MultigridRecon,
                                   data_x::AbstractVector{T}, 
@@ -210,56 +158,6 @@ function reconstructed_potential!(ϕ::AbstractArray{T,3},
     fmg(δ, ϕ, recon.box_size, recon.box_min, recon.β, recon.jacobi_damping_factor, recon.jacobi_niterations, recon.vcycle_niterations, los = recon.los)
     ϕ
 end #func
-
-
-function run!(recon::MultigridRecon,
-            grid_size::Tuple{Int, Int, Int},
-            data_x::AbstractVector{T}, 
-            data_y::AbstractVector{T}, 
-            data_z::AbstractVector{T}, 
-            data_w::AbstractVector{T}) where T <: Real
-
-    if typeof(data_x) <: CuArray
-        ϕ = CuArray{eltype(data_x), 3}(undef, grid_size...)
-        fill!(ϕ, 0)
-    else
-        ϕ = zeros(eltype(data_x), grid_size...);
-    end #if
-    setup_fft!(recon, ϕ)
-    reconstructed_potential!(ϕ,
-                              recon,
-                              data_x, data_y, data_z, data_w, 
-                              );
-    recon.result_cache = ϕ
-end #func
-
-function run!(recon::MultigridRecon,
-                grid_size::Tuple{Int, Int, Int},
-                data_x::AbstractVector{T}, 
-                data_y::AbstractVector{T}, 
-                data_z::AbstractVector{T}, 
-                data_w::AbstractVector{T},
-                rand_x::AbstractVector{T}, 
-                rand_y::AbstractVector{T}, 
-                rand_z::AbstractVector{T}, 
-                rand_w::AbstractVector{T};) where T <: Real
-
-    if typeof(data_x) <: CuArray
-        ϕ = CuArray{eltype(data_x), 3}(undef, grid_size...)
-        fill!(ϕ, 0)
-    else
-        ϕ = zeros(eltype(data_x), grid_size...);
-    end #if
-    recon.box_size, recon.box_min = BAOrec.setup_box(rand_x, rand_y, rand_z, T(500))
-    setup_fft!(recon, ϕ)
-    reconstructed_potential!(ϕ,
-                              recon,
-                              data_x, data_y, data_z, data_w, 
-                              rand_x, rand_y, rand_z, rand_w, 
-                              );
-    recon.result_cache = ϕ
-end #func
-
 
 function read_shifts(recon::AbstractRecon,
                     data_x::AbstractVector{T}, 
@@ -376,14 +274,6 @@ function reconstructed_positions(recon::AbstractRecon,
         data_rec[i] .= data[i] .- displacements[i]
     end #for
     data_rec
-end #func
-
-function reconstructed_positions(recon::AbstractRecon,
-                                data_x::AbstractVector{T}, 
-                                data_y::AbstractVector{T}, 
-                                data_z::AbstractVector{T};
-                                field = :disp, )  where T<:Real
-    reconstructed_positions(recon, data_x, data_y, data_z, recon.result_cache; field = field);
 end #func
 
 function preallocate_memory(recon::IterativeRecon, n_bins)

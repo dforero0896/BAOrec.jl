@@ -1,0 +1,77 @@
+Using 128 threads.
+GPU benchmarking...
+Data copy to GPU
+  2.617290 seconds (2.31 M allocations: 222.104 MiB, 49.22% compilation time)
+  0.064460 seconds (49.28 k allocations: 101.376 MiB, 50.65% compilation time)
+Struct
+  0.016490 seconds (20.93 k allocations: 1.261 MiB, 94.54% compilation time)
+Reconstruction iterative run
+TrialEstimate(588.765 ms)
+BenchmarkTools.Trial
+  params: BenchmarkTools.Parameters
+    seconds: Float64 5.0
+    samples: Int64 10000
+    evals: Int64 1
+    overhead: Float64 0.0
+    gctrial: Bool true
+    gcsample: Bool false
+    time_tolerance: Float64 0.05
+    memory_tolerance: Float64 0.01
+  times: Array{Float64}((9,)) [6.49332969e8, 5.92114219e8, 5.65070232e8, 5.66641983e8, 5.87200626e8, 5.75390293e8, 5.89392736e8, 5.88764992e8, 6.05512874e8]
+  gctimes: Array{Float64}((9,)) [0.0, 0.0, 0.0, 0.0, 6.261751e6, 0.0, 0.0, 6.820652e6, 0.0]
+  memory: Int64 617968
+  allocs: Int64 10109
+Read positions from recon result
+TrialEstimate(52.647 ms)
+BenchmarkTools.Trial
+  params: BenchmarkTools.Parameters
+    seconds: Float64 5.0
+    samples: Int64 10000
+    evals: Int64 1
+    overhead: Float64 0.0
+    gctrial: Bool true
+    gcsample: Bool false
+    time_tolerance: Float64 0.05
+    memory_tolerance: Float64 0.01
+  times: Array{Float64}((93,)) [4.8544832e7, 4.9810451e7, 5.1557419e7, 4.9465974e7, 5.863075e7, 4.9047865e7, 5.65728e7, 5.3065056e7, 4.8610159e7, 4.7471808e7  …  4.7602279e7, 5.04876e7, 5.0795405e7, 5.2774143e7, 5.4785894e7, 5.3717626e7, 5.3957471e7, 5.6275715e7, 4.9542382e7, 4.8187341e7]
+  gctimes: Array{Float64}((93,)) [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0  …  0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  memory: Int64 80704
+  allocs: Int64 1435
+Copy results to CPU
+  0.022070 seconds (4.30 k allocations: 98.762 MiB, 23.79% compilation time)
+Struct
+  0.016942 seconds (25.80 k allocations: 1.562 MiB, 94.61% compilation time)
+Reconstruction multigrid run
+TrialEstimate(1.752 s)
+BenchmarkTools.Trial
+  params: BenchmarkTools.Parameters
+    seconds: Float64 5.0
+    samples: Int64 10000
+    evals: Int64 1
+    overhead: Float64 0.0
+    gctrial: Bool true
+    gcsample: Bool false
+    time_tolerance: Float64 0.05
+    memory_tolerance: Float64 0.01
+  times: Array{Float64}((3,)) [1.751778799e9, 1.774274479e9, 1.703137901e9]
+  gctimes: Array{Float64}((3,)) [0.0, 1.1361525e7, 0.0]
+  memory: Int64 28729344
+  allocs: Int64 445248
+Read positions from recon result
+TrialEstimate(46.118 ms)
+BenchmarkTools.Trial
+  params: BenchmarkTools.Parameters
+    seconds: Float64 5.0
+    samples: Int64 10000
+    evals: Int64 1
+    overhead: Float64 0.0
+    gctrial: Bool true
+    gcsample: Bool false
+    time_tolerance: Float64 0.05
+    memory_tolerance: Float64 0.01
+  times: Array{Float64}((104,)) [4.3564299e7, 4.2248664e7, 5.6477295e7, 5.3411776e7, 5.8068803e7, 4.3578576e7, 4.5789624e7, 5.9844577e7, 6.9990511e7, 5.9955242e7  …  4.3605062e7, 4.0172221e7, 3.983512e7, 4.5645158e7, 3.7469214e7, 5.0369295e7, 4.4954732e7, 5.3922909e7, 4.2586131e7, 5.0299681e7]
+  gctimes: Array{Float64}((104,)) [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.577358e6  …  0.0, 0.0, 0.0, 0.0, 0.0, 4.398377e6, 0.0, 0.0, 0.0, 0.0]
+  memory: Int64 73024
+  allocs: Int64 1385
+Copy results to CPU
+  0.015167 seconds (10 allocations: 98.512 MiB)

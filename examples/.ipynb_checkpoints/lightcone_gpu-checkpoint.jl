@@ -9,7 +9,7 @@ using DataFrames
 using QuadGK
 using Profile
 using FFTW
-FFTW.set_num_threads(128)
+using CUDA
 
 const cosmo = BAOrec.Cosmology(z_tab_max = 10)
 const box_pad = 500f0
@@ -19,13 +19,11 @@ const P0 = 5f3
 data_cat_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_NGC.dat"
 rand_cat_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.dat"
 
-data_cat = DataFrame(CSV.File(data_cat_fn, delim=" ", header=[:ra, :dec, :d, :z, :nz], types = [Float32 for _ in 1:5]))
-rand_cat = DataFrame(CSV.File(rand_cat_fn, delim=" ", header=[:ra, :dec, :d, :z, :nz], types = [Float32 for _ in 1:5]))
+data_cat = DataFrame(CSV.File(data_cat_fn, delim=" ", header=[:ra, :dec, :z, :w, :nz], types = [Float32 for _ in 1:5]))
+rand_cat = DataFrame(CSV.File(rand_cat_fn, delim=" ", header=[:ra, :dec, :z, :w, :nz], types = [Float32 for _ in 1:5]))
 
 data_cat = data_cat[map(z -> ((z > 0.8) & (z < 1)), data_cat.z), :]
 rand_cat = rand_cat[map(z -> ((z > 0.8) & (z < 1)), rand_cat.z), :]
-
-println("Read and masked data")
 
 function sky_to_cartesian(data_cat_ra, data_cat_dec, data_cat_red, cosmo)
     
@@ -81,75 +79,72 @@ end #func
 
 fkp_weights(nz, P0) = 1 / (1 + nz * P0)
 
+
+
+
 println("Coordinate conversion")
 data_cat_pos = sky_to_cartesian(values(data_cat[!,:ra]), values(data_cat[!,:dec]), values(data_cat[!,:z]), cosmo)
 rand_cat_pos = sky_to_cartesian(values(rand_cat[!,:ra]), values(rand_cat[!,:dec]), values(rand_cat[!,:z]), cosmo)
-data_cat_pos = [data_cat_pos[i,:] for i in 1:3]
-rand_cat_pos = [rand_cat_pos[i,:] for i in 1:3]
+data_cat_pos = map(cu, [data_cat_pos[i,:] for i in 1:3])
+rand_cat_pos = map(cu, [rand_cat_pos[i,:] for i in 1:3])
 println("Weights")
-data_cat_w = fkp_weights.(data_cat[!,:nz], Ref(P0))
-rand_cat_w = fkp_weights.(rand_cat[!,:nz], Ref(P0))
+data_cat_w = cu(values(data_cat[!,:w]) .* fkp_weights.(data_cat[!,:nz], Ref(P0)))
+rand_cat_w = cu(values(rand_cat[!,:w]) .* fkp_weights.(rand_cat[!,:nz], Ref(P0)))
 println("Struct")
 recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0, 
                               smoothing_radius = 15f0, n_iter = 3,
                               los = nothing)
 grid_size = (512, 512, 512)
 println("Run")
-
-@time BAOrec.run!(recon, grid_size,
+BAOrec.run!(recon, grid_size,
                     data_cat_pos...,
                     data_cat_w, 
                     rand_cat_pos...,
                     rand_cat_w);
-
 println("Reading new positions")
-@time new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
-@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)
-@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :disp)
-
-
+new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
+new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)
+new_rand_cat_iso = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :disp)
+new_pos = map(Array, new_pos)
+new_rand_cat_sym = map(Array, new_rand_cat_sym)
+new_rand_cat_iso = map(Array, new_rand_cat_iso)
 
 println("Coordinate conversion")
 new_pos = cartesian_to_sky(new_pos..., cosmo)
 new_rand_cat_sym = cartesian_to_sky(new_rand_cat_sym..., cosmo)
 new_rand_cat_iso = cartesian_to_sky(new_rand_cat_iso..., cosmo)
 
-@show [new_pos[i,10] for i in 1:3]
-@show [new_rand_cat_sym[i,10] for i in 1:3]
-@show [new_rand_cat_iso[i,10] for i in 1:3]
-
 println("Save results")
-npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:nz])))
-npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:nz])))
-npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:nz])))
+npzwrite("data/GPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
+npzwrite("data/GPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+npzwrite("data/GPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
 
 new_pos = nothing
 new_rand_cat_sym = nothing
 new_rand_cat_iso = nothing
-println("Now multigrid")
+
 recon = BAOrec.MultigridRecon(bias = 2.2f0, f = 0.757f0, 
                               smoothing_radius = 15f0,
                               los = nothing)
 grid_size = (512, 512, 512)
-@time BAOrec.run!(recon, grid_size,
+BAOrec.run!(recon, grid_size,
                     data_cat_pos...,
                     data_cat_w, 
                     rand_cat_pos...,
                     rand_cat_w);
 
-@time new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
-@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)
-@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :disp)
-
+new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
+new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)
+new_rand_cat_iso = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :disp)
+new_pos = map(Array, new_pos)
+new_rand_cat_sym = map(Array, new_rand_cat_sym)
+new_rand_cat_iso = map(Array, new_rand_cat_iso)
 
 new_pos = cartesian_to_sky(new_pos..., cosmo)
 new_rand_cat_sym = cartesian_to_sky(new_rand_cat_sym..., cosmo)
 new_rand_cat_iso = cartesian_to_sky(new_rand_cat_iso..., cosmo)
 
-@show [new_pos[i,10] for i in 1:3]
-@show [new_rand_cat_sym[i,10] for i in 1:3]
-@show [new_rand_cat_iso[i,10] for i in 1:3]
-println("Save results")
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:nz])))
+
+npzwrite("data/MG_GPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
+npzwrite("data/MG_GPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+npzwrite("data/MG_GPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))

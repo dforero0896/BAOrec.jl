@@ -85,27 +85,37 @@ data_cat_w = values(data_cat[!,:w]) .* fkp_weights.(data_cat[!,:nz], Ref(P0))
 rand_cat_w = values(rand_cat[!,:w]) .* fkp_weights.(rand_cat[!,:nz], Ref(P0))
 
 n_grid = 512
-ϕ = zeros(eltype(data_cat_pos), [n_grid for i in 1:3]...);
+rho = zeros(eltype(data_cat_pos), [n_grid for i in 1:3]...);
 
 
-recon = BAOrec.MultigridRecon(bias = 2.2f0, f = 0.757f0, 
-                              smoothing_radius = 15f0, 
+recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0, 
+                              smoothing_radius = 15f0, n_iter = 3,
                               box_size = box_size, 
                               box_min = box_min,
                               los = nothing)
-BAOrec.setup_fft!(recon, ϕ)
-@time BAOrec.reconstructed_potential!(ϕ,
+BAOrec.setup_fft!(recon, rho)
+@time BAOrec.setup_overdensity!(rho,
+                              recon,
+                              view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:), data_cat_w,
+                              view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), rand_cat_w
+                              );
+p3 = heatmap(dropdims(mean(rho, dims=3), dims=3), aspect_ratio = :equal, c = :vik,)
+
+fill!(rho, 0);
+@time BAOrec.reconstructed_overdensity!(rho,
                               recon,
                               view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:),
                               data_cat_w, 
                               view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:),
                               rand_cat_w);
+p4 = heatmap(dropdims(mean(rho, dims=3), dims=3), aspect_ratio = :equal, c = :vik)
+
+plot(p3, p4)
 
 
-
-@time new_pos = BAOrec.reconstructed_positions(recon, view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:), ϕ; field = :sum);
-@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), ϕ; field = :sum);
-@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), ϕ; field = :disp);
+@time new_pos = BAOrec.reconstructed_positions(recon, view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:), rho; field = :sum);
+@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), rho; field = :sum);
+@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), rho; field = :disp);
 
 
 @time new_pos = cartesian_to_sky(new_pos..., cosmo)
@@ -114,6 +124,7 @@ BAOrec.setup_fft!(recon, ϕ)
 
 
 
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+
+npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
+npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
+npzwrite("data/CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))

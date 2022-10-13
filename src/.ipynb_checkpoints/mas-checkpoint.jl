@@ -111,7 +111,6 @@ function is_in_range(point, ranges)
 end #funcs
 function send_to_relevant_process(point, field, value, mpi_size, mpi_rank, comm)
 
-    # Does not work
     field_glob = global_view(field)
     if is_in_range(point, range_local(field))
         println("No message needed")
@@ -219,7 +218,7 @@ function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x
 
     dims = size(field)
     cell_size = map(T, box_size ./ dims)
-    u = zeros(T, 3) # These buffers make the loop non thread safe
+    u = zeros(T, 3)
     d = zeros(T, 3)
     index_u = zeros(Int, 3)
     index_d = zeros(Int, 3)

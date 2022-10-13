@@ -1,4 +1,4 @@
-using Revise
+using BenchmarkTools
 using BAOrec
 using NPZ
 using Plots
@@ -8,11 +8,19 @@ using Statistics
 using DataFrames
 using QuadGK
 using Profile
+using FFTW
+using CUDA
+using Tables
+
+nthreads = Threads.nthreads()
+print("Using $nthreads threads.\n")
+
 data_cat_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_NGC.dat"
 rand_cat_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.dat"
 
 data_cat = DataFrame(CSV.File(data_cat_fn, delim=" ", header=[:ra, :dec, :z, :w, :nz], types = [Float32 for _ in 1:5]))
 rand_cat = DataFrame(CSV.File(rand_cat_fn, delim=" ", header=[:ra, :dec, :z, :w, :nz], types = [Float32 for _ in 1:5]))
+
 
 data_cat = data_cat[map(z -> ((z > 0.8) & (z < 1)), data_cat.z), :]
 rand_cat = rand_cat[map(z -> ((z > 0.8) & (z < 1)), rand_cat.z), :]
@@ -79,41 +87,79 @@ data_cat_pos = sky_to_cartesian(values(data_cat[!,:ra]), values(data_cat[!,:dec]
 rand_cat_pos = sky_to_cartesian(values(rand_cat[!,:ra]), values(rand_cat[!,:dec]), values(rand_cat[!,:z]), cosmo)
 box_pad = 500f0
 box_size, box_min = BAOrec.setup_box(view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), box_pad)
-
 P0 = 5f3
 data_cat_w = values(data_cat[!,:w]) .* fkp_weights.(data_cat[!,:nz], Ref(P0))
 rand_cat_w = values(rand_cat[!,:w]) .* fkp_weights.(rand_cat[!,:nz], Ref(P0))
 
-n_grid = 512
-ϕ = zeros(eltype(data_cat_pos), [n_grid for i in 1:3]...);
+println("GPU benchmarking...")
 
 
-recon = BAOrec.MultigridRecon(bias = 2.2f0, f = 0.757f0, 
-                              smoothing_radius = 15f0, 
+println("Data copy to GPU")
+
+@time data_cat_pos = map(cu, [data_cat_pos[i,:] for i in 1:3])
+@time rand_cat_pos = map(cu, [rand_cat_pos[i,:] for i in 1:3])
+data_cat_w = values(data_cat[!,:w]) .* fkp_weights.(data_cat[!,:nz], Ref(P0))
+rand_cat_w = values(rand_cat[!,:w]) .* fkp_weights.(rand_cat[!,:nz], Ref(P0))
+data_cat_w, rand_cat_w = map(cu, (data_cat_w, rand_cat_w))
+
+println("Struct")
+@time recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0, 
+                              smoothing_radius = 15f0, n_iter = 3,
                               box_size = box_size, 
                               box_min = box_min,
                               los = nothing)
-BAOrec.setup_fft!(recon, ϕ)
-@time BAOrec.reconstructed_potential!(ϕ,
-                              recon,
-                              view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:),
-                              data_cat_w, 
-                              view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:),
-                              rand_cat_w);
 
+println("Reconstruction iterative run")
+grid_size = (512, 512, 512)
+t = @benchmark begin
+    CUDA.@sync begin 
+        BAOrec.run!($recon, $grid_size,
+                    $data_cat_pos...,
+                    $data_cat_w, 
+                    $rand_cat_pos...,
+                    $rand_cat_w)
+    end
+end
+println(median(t))
+dump(t)
 
+println("Read positions from recon result")
+t = @benchmark new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum)
+println(median(t))
+dump(t)
+new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum) #so results can be written?
+println("Copy results to CPU")
+@time new_pos = map(Array, new_pos)
 
-@time new_pos = BAOrec.reconstructed_positions(recon, view(data_cat_pos, 1,:), view(data_cat_pos, 2,:), view(data_cat_pos, 3,:), ϕ; field = :sum);
-@time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), ϕ; field = :sum);
-@time new_rand_cat_iso = BAOrec.reconstructed_positions(recon, view(rand_cat_pos, 1,:), view(rand_cat_pos, 2,:), view(rand_cat_pos, 3,:), ϕ; field = :disp);
+CSV.write("test/bchmk_gpu_iter.csv", Tables.table(hcat(view(new_pos[1], 1:10), view(new_pos[2], 1:10), view(new_pos[3], 1:10))), writeheader=false)
 
+println("Struct")
+@time recon = BAOrec.MultigridRecon(bias = 2.2f0, f = 0.757f0, 
+                              smoothing_radius = 15f0,
+                              box_size = box_size, 
+                              box_min = box_min,
+                              los = nothing)
 
-@time new_pos = cartesian_to_sky(new_pos..., cosmo)
-@time new_rand_cat_sym = cartesian_to_sky(new_rand_cat_sym..., cosmo)
-@time new_rand_cat_iso = cartesian_to_sky(new_rand_cat_iso..., cosmo)
+println("Reconstruction multigrid run")
+t = @benchmark begin
+    CUDA.@sync begin 
+        BAOrec.run!($recon, $grid_size,
+                    $data_cat_pos...,
+                    $data_cat_w, 
+                    $rand_cat_pos...,
+                    $rand_cat_w)
+    end
+end
+println(median(t))
+dump(t)
+println("Read positions from recon result")
+t = @benchmark new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum);
+println(median(t))
+dump(t)
+new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum);
 
+println("Copy results to CPU")
+@time new_pos = map(Array, new_pos)
 
+CSV.write("test/bchmk_gpu_mgrid.csv", Tables.table(hcat(view(new_pos[1], 1:10), view(new_pos[2], 1:10), view(new_pos[3], 1:10))), writeheader=false)
 
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_NGC.rec.npy", hcat(new_pos', values(data_cat[!,:w]), values(data_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.sym.npy", hcat(new_rand_cat_sym', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
-npzwrite("data/MG_CPU_UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.rec.iso.npy", hcat(new_rand_cat_iso', values(rand_cat[!,:w]), values(rand_cat[!,:nz])))
