@@ -20,13 +20,13 @@ recon = BAOrec.IterativeRecon(bias = 2.2f0, f = 0.757f0,
                               box_size = box_size, 
                               box_min = box_min,
                               los = los)
+@time BAOrec.setup_fft!(recon, rho)                              
 @time BAOrec.setup_overdensity!(rho,
                         recon,
                         view(data, 1,:), view(data, 2,:), view(data, 3,:), data_w,
                         );
 heatmap(dropdims(mean(rho, dims=1), dims=1))
-kvec = BAOrec.k_vec([size(rho)...], box_size);
-xvec = BAOrec.x_vec([size(rho)...], box_size);
+
 fill!(rho, 0);
 @time BAOrec.reconstructed_overdensity!(rho,
                                 recon,
