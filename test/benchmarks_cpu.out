@@ -1,0 +1,14 @@
+Using 128 threads.
+CPU benchmarking...
+Struct
+  0.015896 seconds (20.93 k allocations: 1.261 MiB, 96.31% compilation time)
+Reconstruction iterative run
+  27.428 s (46141 allocations: 7.52 GiB)
+Read positions from recon result
+  585.135 ms (129131052 allocations: 3.72 GiB)
+Struct
+  0.015992 seconds (25.80 k allocations: 1.562 MiB, 96.49% compilation time)
+Reconstruction multigrid run
+  24.792 s (1734580 allocations: 19.96 GiB)
+Read positions from recon result
+  1.448 s (129131100 allocations: 4.22 GiB)
