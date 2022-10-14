@@ -1,5 +1,6 @@
 module BAOrec
 
+using LoopVectorization
 using Parameters
 using StaticArrays
 using LinearAlgebra
