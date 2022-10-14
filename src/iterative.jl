@@ -3,10 +3,7 @@
 
 
 function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tuple{AbstractVector{T}, AbstractVector{T}, AbstractVector{T}}, iter::Int, β::T, fft_plan;
-                r̂ = nothing, x⃗ = nothing) where T <: Real
-    println("Iteration ", iter, " \n")
-
-    
+                r̂ = nothing, x⃗ = nothing) where T <: Real 
     
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
     for I in CartesianIndices(δ_k)
@@ -20,7 +17,6 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
     δ_r .= δ_s
     if r̂ === nothing
         @assert x⃗ != nothing
-        println("Using local line of sight r̂. \n")
         for i in 1:3
             for j in i:3
                     
@@ -73,10 +69,7 @@ end #func
 
 function iterate!(δ_r::PencilArray{T,3}, δ_s::PencilArray{T,3}, k⃗::Tuple{AbstractVector{T}, AbstractVector{T}, AbstractVector{T}}, iter::Int, β::T, fft_plan;
     r̂ = nothing, x⃗ = nothing) where T <: Real
-        
-    println("Iteration ", iter, " \n")
-
-
+    
     δ_r_glob = global_view(δ_r)
     δ_s_glob = global_view(δ_s)
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
@@ -96,7 +89,6 @@ function iterate!(δ_r::PencilArray{T,3}, δ_s::PencilArray{T,3}, k⃗::Tuple{Ab
     δ_r .= δ_s
     if r̂ === nothing
         @assert x⃗ != nothing
-        println("Using local line of sight r̂. \n")
         for i in 1:3
             for j in i:3
                     
@@ -158,12 +150,11 @@ end #function
 
 function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVector{T}, AbstractVector{T}, AbstractVector{T}}, iter::Int, β::T, fft_plan;
     r̂ = nothing, x⃗ = nothing) where T <: Real
-    println("Iteration ", iter)
     k⃗ = map(CuArray, k⃗)
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
     device = KernelAbstractions.get_device(δ_k)
-    inv_lap! = inv_laplace_kernel!(device, 256)
-    hessian! = hessian_kernel!(device, 256)
+    inv_lap! = inv_laplace_kernel!(device)
+    hessian! = hessian_kernel!(device)
     ev = inv_lap!(δ_k, k⃗, ndrange = size(δ_k))
     wait(ev)
     #δ_k[1,1,1] = 0.
@@ -173,7 +164,6 @@ function iterate!(δ_r::CuArray{T,3}, δ_s::CuArray{T,3}, k⃗::Tuple{AbstractVe
     
     if r̂ === nothing
         @assert x⃗ != nothing
-        println("Using local line of sight r̂. \n")
         #x² = typeof(δ_r)([x⃗[1][i]^2 + x⃗[2][j]^2 + x⃗[3][k]^2 for i in eachindex(x⃗[1]), j in eachindex(x⃗[2]), k in eachindex(x⃗[3])])
         x⃗ = map(CuArray, x⃗)
         for i in 1:3
@@ -236,8 +226,11 @@ end #function
 
 
 
-function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
 
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
     k⃗ = map(CuArray, k_vec(δ_r, box_size))
     
     δ_k = fft_plan * δ_r
@@ -246,7 +239,7 @@ function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, d
     Ψ_r = similar(δ_r)
     Ψ_interp = Tuple(zero(data_x) for _ in 1:3)
     device  = KernelAbstractions.get_device(δ_k)
-    kernel! = displacement_kernel!(device, 512)
+    kernel! = displacement_kernel!(device)
     for i in 1:3
         ev = kernel!(Ψ_k, k⃗, δ_k, i, ndrange = size(δ_k))
         wait(ev)
@@ -257,8 +250,11 @@ function compute_displacements(δ_r::CuArray{T, 3}, data_x::AbstractVector{T}, d
 end #func
 
 
-function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
 
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
     k⃗ = k_vec(δ_r, box_size)
     
     δ_k = fft_plan * δ_r
@@ -267,10 +263,9 @@ function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector
     Ψ_r = similar(δ_r)
     Ψ_interp = Tuple(zero(data_x) for _ in 1:3)
     for i in 1:3
-        for I in CartesianIndices(δ_k)
+        Threads.@threads for I in CartesianIndices(δ_k)
             k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
-            k² = k² == 0 ? 1. : k²
-            Ψ_k[I] = im * k⃗[i][I[i]] * δ_k[I] / k²
+            Ψ_k[I] = k² > 0 ? im * k⃗[i][I[i]] * δ_k[I] / k² : 0
         end #for
         Ψ_k[1,1,1] = 0
         ldiv!(Ψ_r, fft_plan, Ψ_k)
@@ -280,7 +275,11 @@ function compute_displacements(δ_r::AbstractArray{T, 3}, data_x::AbstractVector
 end #func
 
 
-function compute_displacements(δ_r::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, box_size::SVector{3, T}, box_min::SVector{3, T}, fft_plan) where T <: Real
+function compute_displacements(δ_r::PencilArray{T, 3}, data_x::AbstractVector{T}, data_y::AbstractVector{T}, data_z::AbstractVector{T}, recon::IterativeRecon) where T <: Real
+
+    box_size = recon.box_size
+    box_min = recon.box_min
+    fft_plan = recon.fft_plan
 
     k⃗ = k_vec(δ_r, box_size)
     
