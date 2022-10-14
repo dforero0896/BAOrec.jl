@@ -19,7 +19,6 @@ box_size = @SVector [2500f0, 2500f0, 2500f0]
 box_min = @SVector [0f0, 0f0, 0f0]
 data = data[:,mapslices(pos -> all([pos[i]<box_size[i] for i in eachindex(pos)]), data, dims=1)']
 data = map(cu, [data[i,:] for i in 1:3])
-
 data_w = cu(zero(data[1]) .+ 1)
 rho = CuArray(zeros(Float32, [n_grid for i in 1:3]...))
 
@@ -52,7 +51,7 @@ savefig("/home/astro/dforero/codes/BAOrec/examples/simulation_gpu.png")
 
 
 
-@time new_pos = BAOrec.reconstructed_positions(recon, data[1], data[2], data[3], rho; field = :sum);
+@time new_pos = BAOrec.reconstructed_positions(recon, data..., rho; field = :sum);
 rx = CuArray{Float32, 1}(undef, 10 * size(data[1],1))
 rand!(rx)
 @. rx *= recon.box_size[1]
@@ -71,6 +70,6 @@ randoms = (rx, ry, rz)
 @time new_rand_sym = map(Array, new_rand_sym)
 @time new_rand_iso = map(Array, new_rand_iso)
 
-npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.dat.rec.npy", hcat(new_pos...))
-npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.sym.npy", hcat(new_rand_sym...))
-npzwrite("/home/astro/dforero/codes/BAOrec/data/CATALPTCICz0.466G960S1010008301_zspace.ran.rec.iso.npy", hcat(new_rand_iso...))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_CATALPTCICz0.466G960S1010008301_zspace.dat.rec.npy", hcat(new_pos...))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_CATALPTCICz0.466G960S1010008301_zspace.ran.rec.sym.npy", hcat(new_rand_sym...))
+npzwrite("/home/astro/dforero/codes/BAOrec/data/GPU_CATALPTCICz0.466G960S1010008301_zspace.ran.rec.iso.npy", hcat(new_rand_iso...))
