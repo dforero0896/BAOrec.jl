@@ -111,7 +111,6 @@ function is_in_range(point, ranges)
 end #funcs
 function send_to_relevant_process(point, field, value, mpi_size, mpi_rank, comm)
 
-    # Does not work
     field_glob = global_view(field)
     if is_in_range(point, range_local(field))
         println("No message needed")
@@ -219,50 +218,30 @@ function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x
 
     dims = size(field)
     cell_size = map(T, box_size ./ dims)
-    
-    Threads.@threads for i in eachindex(data_x)
-        dist_x = (data_x[i] - box_min[1]) / cell_size[1]
-        dist_y = (data_y[i] - box_min[2]) / cell_size[2]
-        dist_z = (data_z[i] - box_min[3]) / cell_size[3]
-
-        dist_i_x = Int(floor(dist_x)) 
-        dist_i_y = Int(floor(dist_y)) 
-        dist_i_z = Int(floor(dist_z)) 
-
-        ux = dist_x - dist_i_x
-        uy = dist_y - dist_i_y
-        uz = dist_z - dist_i_z
-
-        dx = 1 - ux
-        dy = 1 - uy
-        dz = 1 - uz
-
-        dist_i_x += 1
-        dist_i_y += 1
-        dist_i_z += 1
-
-        index_d_x = (dist_i_x > dims[1]) & wrap ? dist_i_x - dims[1] : dist_i_x
-        index_d_y = (dist_i_y > dims[2]) & wrap ? dist_i_y - dims[2] : dist_i_y
-        index_d_z = (dist_i_z > dims[3]) & wrap ? dist_i_z - dims[3] : dist_i_z
-
-        index_u_x = index_d_x + 1
-        index_u_y = index_d_y + 1
-        index_u_z = index_d_z + 1
-
-
-        index_u_x = (index_u_x > dims[1]) & wrap ? index_u_x - dims[1] : index_u_x
-        index_u_y = (index_u_y > dims[2]) & wrap ? index_u_y - dims[2] : index_u_y
-        index_u_z = (index_u_z > dims[3]) & wrap ? index_u_z - dims[3] : index_u_z
-
-
-        output[i] = field[index_d_x, index_d_y, index_d_z] * dx * dy * dz + 
-                    field[index_d_x, index_d_y, index_u_z] * dx * dy * uz +
-                    field[index_d_x, index_u_y, index_d_z] * dx * uy * dz +
-                    field[index_d_x, index_u_y, index_u_z] * dx * uy * uz +
-                    field[index_u_x, index_d_y, index_d_z] * ux * dy * dz +
-                    field[index_u_x, index_d_y, index_u_z] * ux * dy * uz +
-                    field[index_u_x, index_u_y, index_d_z] * ux * uy * dz +
-                    field[index_u_x, index_u_y, index_u_z] * ux * uy * uz
+    u = zeros(T, 3)
+    d = zeros(T, 3)
+    index_u = zeros(Int, 3)
+    index_d = zeros(Int, 3)
+    data = (data_x, data_y, data_z)
+    for i in eachindex(data_x)
+        for j in 1:3
+            dist = (data[j][i] - box_min[j]) / cell_size[j]
+            dist_i = Int(floor(dist)) 
+            u[j] = dist - dist_i
+            d[j] = 1 - u[j]
+            dist_i += 1
+            index_d[j] = (dist_i > dims[j]) & wrap ? dist_i - dims[j] : dist_i
+            index_u[j] = index_d[j] + 1
+            index_u[j] = (index_u[j] > dims[j]) & wrap ? index_u[j] - dims[j] : index_u[j]
+        end #for 
+        output[i] = field[index_d[1], index_d[2], index_d[3]] * d[1] * d[2] * d[3] + 
+                    field[index_d[1], index_d[2], index_u[3]] * d[1] * d[2] * u[3]+
+                    field[index_d[1], index_u[2], index_d[3]] * d[1] * u[2] * d[3]+
+                    field[index_d[1], index_u[2], index_u[3]] * d[1] * u[2] * u[3]+
+                    field[index_u[1], index_d[2], index_d[3]] * u[1] * d[2] * d[3]+
+                    field[index_u[1], index_d[2], index_u[3]] * u[1] * d[2] * u[3]+
+                    field[index_u[1], index_u[2], index_d[3]] * u[1] * u[2] * d[3]+
+                    field[index_u[1], index_u[2], index_u[3]] * u[1] * u[2] * u[3]
 
     end #for
     output
