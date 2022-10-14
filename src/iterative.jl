@@ -6,7 +6,7 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
                 r̂ = nothing, x⃗ = nothing) where T <: Real 
     
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
-    for I in CartesianIndices(δ_k)
+    Threads.@threads for I in CartesianIndices(δ_k)
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
         k² = k² == 0 ? 1 : k²
         δ_k[I] /= k²
@@ -14,7 +14,7 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
     δ_k[1,1,1] = 0.
     ∂Ψj_∂xi_k = similar(δ_k)
     ∂Ψj_∂xi_x = similar(δ_r)
-    δ_r .= δ_s
+    @turbo δ_r .= δ_s
     if r̂ === nothing
         @assert x⃗ != nothing
         for i in 1:3
@@ -23,13 +23,13 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
                 factor::T = (1. + T(i != j)) * β
                 factor = iter == 1 ? factor / (1 + β) : factor
                 
-                for I in CartesianIndices(δ_k)
+                Threads.@threads for I in CartesianIndices(δ_k)
                     ∂Ψj_∂xi_k[I] = k⃗[i][I[i]] * k⃗[j][I[j]] * δ_k[I]
                 end #for
 
                 ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-                for I in CartesianIndices(δ_r)
+                Threads.@threads for I in CartesianIndices(δ_r)
                     x² = x⃗[1][I[1]]^2 + x⃗[2][I[2]]^2 + x⃗[3][I[3]]^2
                     δ_r[I] = x² > 0 ? δ_r[I] -  factor * ∂Ψj_∂xi_x[I] * x⃗[i][I[i]] * x⃗[j][I[j]] / x² : 0
                 end #for
@@ -49,13 +49,13 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
             factor::T = β
             factor = iter === 1 ? factor / (1 + β) : factor
 
-            for I in CartesianIndices(δ_k)
+            Threads.@threads for I in CartesianIndices(δ_k)
                 ∂Ψj_∂xi_k[I] = k⃗[i][I[i]]^2 * r̂[i] * δ_k[I]
             end #for
 
             ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-            for I in CartesianIndices(δ_r)
+            Threads.@threads for I in CartesianIndices(δ_r)
                 δ_r[I] = δ_r[I] - factor * ∂Ψj_∂xi_x[I]
             end #for
 
