@@ -42,9 +42,12 @@ if __name__ == '__main__':
                       output_file = None)
     plot_correlations(pk, ax, label = 'Pre')
 
+    fig.savefig("plots/simulation.png")
     
-    post_d = np.load("data/GPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.dat.rec.npy").astype(np.double)
-    post_r = np.load("data/GPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.ran.rec.iso.npy").astype(np.double)
+    
+
+    post_d = np.load("data/CPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.dat.rec.npy").astype(np.double)
+    post_r = np.load("data/CPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.ran.rec.iso.npy").astype(np.double)
     post_d = (post_d + box_size) % box_size
     post_r = (post_r + box_size) % box_size
     pk = compute_auto_box_rand(post_d[:,0], post_d[:,1], post_d[:,2], np.ones_like(post_d[:,0]),
@@ -54,8 +57,9 @@ if __name__ == '__main__':
     plot_correlations(pk, ax, label = 'Iso')
     
 
+    fig.savefig("plots/simulation.png")
     
-    post_r = np.load("data/GPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.ran.rec.sym.npy").astype(np.double)
+    post_r = np.load("data/CPU_UNIT_DESI_Shadab_HOD_snap97_ELG_v0.ran.rec.sym.npy").astype(np.double)
     post_r = (post_r + box_size) % box_size
     pk = compute_auto_box_rand(post_d[:,0], post_d[:,1], post_d[:,2], np.ones_like(post_d[:,0]),
                       post_r[:,0], post_r[:,1], post_r[:,2], np.ones_like(post_r[:,0]),
@@ -65,4 +69,4 @@ if __name__ == '__main__':
 
     ax.legend(loc='top')
 
-    fig.savefig("plots/simulation_gpu.png")
+    fig.savefig("plots/simulation.png")
