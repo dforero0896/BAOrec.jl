@@ -102,7 +102,10 @@ println("Run")
                     data_cat_w, 
                     rand_cat_pos...,
                     rand_cat_w);
-
+#displacements = map(Array, BAOrec.read_shifts(recon, data_cat_pos..., recon.result_cache, field = :disp))
+#@show [d[10] for d in displacements]
+#displacements = map(Array, BAOrec.read_shifts(recon, data_cat_pos..., recon.result_cache, field = :rsd))
+#@show [d[10] for d in displacements]
 println("Reading new positions")
 @time new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
 @time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)
@@ -140,7 +143,6 @@ grid_size = (512, 512, 512)
                     rand_cat_pos...,
                     rand_cat_w);
 
-displacements = map(Array, BAOrec.compute_displacements(recon.result_cache, data_cat_pos..., recon))
 
 new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
 new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)

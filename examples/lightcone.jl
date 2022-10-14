@@ -101,7 +101,10 @@ println("Run")
                     data_cat_w, 
                     rand_cat_pos...,
                     rand_cat_w);
-
+#displacements = BAOrec.read_shifts(recon, data_cat_pos..., recon.result_cache, field = :disp)
+#@show [d[10] for d in displacements]
+#displacements = BAOrec.read_shifts(recon, data_cat_pos..., recon.result_cache, field = :rsd)
+#@show [d[10] for d in displacements]
 println("Reading new positions")
 @time new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum)
 @time new_rand_cat_sym = BAOrec.reconstructed_positions(recon, rand_cat_pos...; field = :sum)

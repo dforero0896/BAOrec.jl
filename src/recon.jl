@@ -278,12 +278,14 @@ function read_shifts(recon::AbstractRecon,
             los = zeros(T, 3)
             Threads.@threads for i in eachindex(data_x)
                 dist = sqrt(data_x[i]^2 + data_y[i]^2 + data_z[i]^2)
-                for j in 1:3
-                    los[j] = data[j][i] / dist
-                end #for
-                for j in 1:3
-                    rsd[j][i] = recon.f * sum([displacements[l][i] * los[l] for l in 1:3]) * los[j] 
-                end #for
+                los_x = data_x[i] / dist
+                los_y = data_y[i] / dist
+                los_z = data_z[i] / dist
+                disp_dot_r = ((displacements[1][i] * los_x) + (displacements[2][i] * los_y) + (displacements[3][i] * los_z))
+                rsd[1][i] = recon.f * disp_dot_r * los_x 
+                rsd[2][i] = recon.f * disp_dot_r * los_y
+                rsd[3][i] = recon.f * disp_dot_r * los_z 
+                
             end #for
         else #los provided
             Threads.@threads for i in eachindex(data_x)
@@ -307,7 +309,6 @@ end #func
 
     i = @index(Global, Linear)
     dist = sqrt(data_x[i]^2 + data_y[i]^2 + data_z[i]^2)
-    
     los_x = data_x[i] / dist
     los_y = data_y[i] / dist
     los_z = data_z[i] / dist
