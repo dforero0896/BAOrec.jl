@@ -220,7 +220,7 @@ function read_cic!(output::AbstractVector{T}, field::AbstractArray{T, 3}, data_x
     dims = size(field)
     cell_size = map(T, box_size ./ dims)
     
-    Threads.@threads for i in eachindex(data_x)
+    @inbounds Threads.@threads for i in eachindex(data_x)
         dist_x = (data_x[i] - box_min[1]) / cell_size[1]
         dist_y = (data_y[i] - box_min[2]) / cell_size[2]
         dist_z = (data_z[i] - box_min[3]) / cell_size[3]
@@ -314,11 +314,6 @@ end #func
                 field[index_u_x, index_d_y, index_u_z] * ux * dy * uz +
                 field[index_u_x, index_u_y, index_d_z] * ux * uy * dz +
                 field[index_u_x, index_u_y, index_u_z] * ux * uy * uz
-
-
-
-
-
 
 end #func
 
@@ -532,7 +527,7 @@ function read_grad_cic!(out_x::AbstractVector{T}, out_y::AbstractVector{T}, out_
     end #fun
 
 
-    Threads.@threads for i in eachindex(data_x)
+    @inbounds Threads.@threads for i in eachindex(data_x)
 
         ∇field = Zygote.gradient(phi_fun , data_x[i], data_y[i], data_z[i])
         out_x = ∇field[1]

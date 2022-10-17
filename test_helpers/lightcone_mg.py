@@ -37,10 +37,10 @@ if __name__ == '__main__':
     data_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_NGC.dat"
     rand_fn = "/global/cfs/projectdirs/desi/mocks/UNIT/HOD_Shadab/multiple_snapshot_lightcone/UNIT_lightcone_multibox_ELG_footprint_nz_1xdata_5.ran_NGC.dat"
     data = pd.read_csv(data_fn, delim_whitespace = True, engine = 'c', usecols = (0,1,3,4), names = ['ra', 'dec', 'z', 'nz']).values
-    data = data[(data[:,2] > 0.) & (data[:,2] < 1)]
+    data = data[(data[:,2] > 0.8) & (data[:,2] < 1)]
 
     rand = pd.read_csv(rand_fn, delim_whitespace = True, engine = 'c', usecols = (0,1,3,4), names = ['ra', 'dec', 'z', 'nz']).values
-    rand = rand[(rand[:,2] > 0.) & (rand[:,2] < 1)]
+    rand = rand[(rand[:,2] > 0.8) & (rand[:,2] < 1)]
 
     fkp_data = 1. / (1 + data[:,3] * P0)
     fkp_rand = 1. / (1 + rand[:,3] * P0)

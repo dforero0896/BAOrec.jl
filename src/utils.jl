@@ -47,7 +47,7 @@ function smooth!(field::AbstractArray{T, 3}, smoothing_radius::T, box_size::SVec
     
     field_k = fft_plan * field
     k⃗ = k_vec(field, box_size)
-    for I in CartesianIndices(field_k)
+    @inbounds Threads.@threads for I in CartesianIndices(field_k)
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
         field_k[I] *= exp(-0.5 * smoothing_radius^2 * k²)
     end #for

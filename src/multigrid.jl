@@ -23,7 +23,7 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
 
     for iter in 1:niterations
 
-        Threads.@threads for I in CartesianIndices(v)
+        @inbounds Threads.@threads for I in CartesianIndices(v)
 
             ix0, iy0, iz0 = Tuple(I)
 
@@ -166,7 +166,7 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
     losn = los != nothing ? los ./ cell : nothing
     nmesh = size(v)
     
-    Threads.@threads for I in CartesianIndices(v)
+    @inbounds Threads.@threads for I in CartesianIndices(v)
 
         ix0, iy0, iz0 = Tuple(I)
 
@@ -294,7 +294,7 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
  function prolong!(v1h::AbstractArray{T,3}, v2h::AbstractArray{T,3}) where T <: AbstractFloat
     nmesh = size(v2h)
     nmesh2 = size(v1h)
-    Threads.@threads for I in CartesianIndices(v2h)
+    @inbounds Threads.@threads for I in CartesianIndices(v2h)
 
         ix0, iy0, iz0 = Tuple(I)
 
@@ -413,7 +413,7 @@ function reduce!(v2h::AbstractArray{T,3}, v1h::AbstractArray{T,3}) where T <: Ab
     nmesh2 = size(v2h)
     nmesh = size(v1h)
     
-    Threads.@threads for I in CartesianIndices(v2h)
+    @inbounds Threads.@threads for I in CartesianIndices(v2h)
 
         
 
@@ -616,7 +616,7 @@ function compute_displacements(ϕ::AbstractArray{T, 3}, data_x::AbstractVector{T
     ∂ᵢϕ = similar(ϕ)
     kᵢϕ = similar(ϕ_k)
     for i in 1:3
-        Threads.@threads for I in CartesianIndices(ϕ_k)
+        @inbounds Threads.@threads for I in CartesianIndices(ϕ_k)
             kᵢϕ[I] = im * k⃗[i][I[i]] * ϕ_k[I]
         end #for
         ldiv!(∂ᵢϕ, fft_plan, kᵢϕ)

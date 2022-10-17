@@ -63,6 +63,10 @@ const kb = 8.6173303e-5
 
 end #struct
 
+function DESICosmology()
+    Cosmology(;ω_b =0.02237f0, ω_c = 0.1200f0, h = 0.6736f0, ns = 0.9649f0, Neff = 2.0328f0 + 1f0, w0 = -1f0, wa = 0f0)
+end #funct
+
 Ω_ν(c::Cosmology, z) = c.Ω_ν₀ * (1 + z)^4
 Ω_γ(c::Cosmology, z) = c.Ω_γ₀ * (1 + z)^4
 Ω_b(c::Cosmology, z) = c.Ω_b₀ * (1 + z)^3
