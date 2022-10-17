@@ -34,11 +34,9 @@ For more information check how to submit jobs to Perlmutter.
 ### Benchmarks
 
 The benchmarks below are from the scripts in `test/` and performed with `BenchmarkTools.jl` and the `Base` Julia timer (for the less important parts). On the [CPU](https://github.com/dforero0896/BAOrec.jl/blob/main/test/benchmarks_cpu.out)
-```bash:test/benchmarks_cpu.out
-```
+https://github.com/dforero0896/BAOrec.jl/blob/d071d390c88f83ad790135ccb2c2adc17977d21b/test/benchmarks_cpu.out#L1-L14
 On the [GPU](https://github.com/dforero0896/BAOrec.jl/blob/main/test/benchmarks_gpu.out)
-```bash:test/benchmarks_gpu.out
-```
+https://github.com/dforero0896/BAOrec.jl/blob/d071d390c88f83ad790135ccb2c2adc17977d21b/test/benchmarks_gpu.out#L1-L77
   
 I am not *that* confident I am properly benchmarking the GPU runs given that they look a bit *too* fast.
 
