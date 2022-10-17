@@ -6,11 +6,7 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
                 r̂ = nothing, x⃗ = nothing) where T <: Real 
     
     δ_k = fft_plan * δ_r # δ_k computed from the current real δ
-<<<<<<< HEAD
     @inbounds Threads.@threads for I in CartesianIndices(δ_k)
-=======
-    Threads.@threads for I in CartesianIndices(δ_k)
->>>>>>> c2903e40761f2400a8c4673d905e513580bae79e
         k² = k⃗[1][I[1]]^2 + k⃗[2][I[2]]^2 + k⃗[3][I[3]]^2
         k² = k² == 0 ? 1 : k²
         δ_k[I] /= k²
@@ -27,21 +23,13 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
                 factor::T = (1. + T(i != j)) * β
                 factor = iter == 1 ? factor / (1 + β) : factor
                 
-<<<<<<< HEAD
                 @inbounds Threads.@threads  for I in CartesianIndices(δ_k)
-=======
-                Threads.@threads for I in CartesianIndices(δ_k)
->>>>>>> c2903e40761f2400a8c4673d905e513580bae79e
                     ∂Ψj_∂xi_k[I] = k⃗[i][I[i]] * k⃗[j][I[j]] * δ_k[I]
                 end #for
 
                 ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-<<<<<<< HEAD
                 @inbounds Threads.@threads for I in CartesianIndices(δ_r)
-=======
-                Threads.@threads for I in CartesianIndices(δ_r)
->>>>>>> c2903e40761f2400a8c4673d905e513580bae79e
                     x² = x⃗[1][I[1]]^2 + x⃗[2][I[2]]^2 + x⃗[3][I[3]]^2
                     δ_r[I] = x² > 0 ? δ_r[I] -  factor * ∂Ψj_∂xi_x[I] * x⃗[i][I[i]] * x⃗[j][I[j]] / x² : 0
                 end #for
@@ -61,21 +49,13 @@ function iterate!(δ_r::AbstractArray{T,3}, δ_s::AbstractArray{T,3}, k⃗::Tupl
             factor::T = β
             factor = iter === 1 ? factor / (1 + β) : factor
 
-<<<<<<< HEAD
             @inbounds Threads.@threads for I in CartesianIndices(δ_k)
-=======
-            Threads.@threads for I in CartesianIndices(δ_k)
->>>>>>> c2903e40761f2400a8c4673d905e513580bae79e
                 ∂Ψj_∂xi_k[I] = k⃗[i][I[i]]^2 * r̂[i] * δ_k[I]
             end #for
 
             ldiv!(∂Ψj_∂xi_x, fft_plan, ∂Ψj_∂xi_k) # Destroys ∂Ψj_∂ki_k
 
-<<<<<<< HEAD
             @inbounds Threads.@threads for I in CartesianIndices(δ_r)
-=======
-            Threads.@threads for I in CartesianIndices(δ_r)
->>>>>>> c2903e40761f2400a8c4673d905e513580bae79e
                 δ_r[I] = δ_r[I] - factor * ∂Ψj_∂xi_x[I]
             end #for
 
