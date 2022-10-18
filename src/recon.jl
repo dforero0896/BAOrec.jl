@@ -8,7 +8,7 @@ abstract type AbstractRecon end
     box_min = nothing
     los = nothing
     n_iter::Int = 3
-    β = f / bias
+    β = typeof(bias)(f / bias)
     fft_plan = nothing
     result_cache = nothing #For iterative the recon result is the overdensity in real space
     
@@ -26,7 +26,7 @@ end #struct
     jacobi_damping_factor = typeof(f)(0.4)
     jacobi_niterations::Int = 5
     vcycle_niterations::Int = 6
-    β = f / bias
+    β = typeof(bias)(f / bias)
     fft_plan = nothing
     result_cache = nothing #For multigrid recon the result is the reconstruction potential field.
 
