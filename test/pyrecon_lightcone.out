@@ -1,0 +1,250 @@
+Iterative recon took 39.74974608421326s
+Reading from field took 2.8451645374298096s
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2750, 4390, 2680]
+  Box boundaries: [[-2329.69,420.306], [-2301.79,2088.21], [-417.403,2262.6]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2760, 4380, 2690]
+  Box boundaries: [[-2336.59,423.412], [-2296.34,2083.66], [-421.682,2268.32]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2760, 4380, 2690]
+  Box boundaries: [[-2336.58,423.421], [-2295.86,2084.14], [-420.854,2269.15]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...Multigrid recon took 15.974894285202026s
+Reading from field took 1.793267011642456s
+  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2750, 4390, 2680]
+  Box boundaries: [[-2329.69,420.306], [-2301.79,2088.21], [-417.403,2262.6]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2760, 4380, 2690]
+  Box boundaries: [[-2336.6,423.4], [-2296.3,2083.7], [-421.69,2268.31]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_lc.conf
+  DATA_CONVERT    = T
+  RAND_CONVERT    = T
+  OMEGA_M         = 0.31
+  OMEGA_LAMBDA    = 0.69
+  CMVDST_ERR      = 1e-08
+  CUBIC_SIM       = F
+  BOX_PAD         = 0.02 , 0.02 , 0.02
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = F
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.001
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Converting coordinates ...
+  Legendre-Gauss order 7 chosen for the integration error 1e-08
+  Conversion done for the data catalog
+  Conversion done for the random catalog
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Box size: [2760, 4380, 2690]
+  Box boundaries: [[-2336.59,423.412], [-2295.8,2084.2], [-420.882,2269.12]]
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Auto power spectrum monopole computed
+  Executing 5 FFTs for l = 2 ...  Done with computing 5 FFTs for l = 2
+  Auto power spectrum with l = 2 computed
+  Executing 9 FFTs for l = 4 ...  Done with computing 9 FFTs for l = 4
+  Auto power spectrum with l = 4 computed
+[70C[[32;1mDONE[0m]

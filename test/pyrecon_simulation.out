@@ -1,0 +1,160 @@
+Iterative recon took 12.488554954528809s
+Reading from field took 15.862197637557983s
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 4.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...Multigrid recon took 12.789667844772339s
+Reading from field took 9.534903526306152s
+  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 4.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
+Loading configurations ...
+  CONFIG_FILE     = test_helpers/powspec_auto.conf
+  CUBIC_SIM       = T
+  LINE_OF_SIGHT   = 0 , 0 , 1
+  BOX_SIZE        = 1000 , 1000 , 1000
+  GRID_SIZE       = 512
+  PARTICLE_ASSIGN = TSC
+  GRID_INTERLACE  = T
+  MULTIPOLE       = 0 , 2 , 4
+  KMIN            = 0
+  LOG_SCALE       = F
+  BIN_SIZE        = 0.005
+  OUTPUT_AUTO     = test/test.out
+  OUTPUT_HEADER   = T
+  OVERWRITE       = 1
+[70C[[32;1mDONE[0m]
+Generating meshes for FFT ...
+TEST
+  ~ 5.51 Gb memory allocated for the density fields
+  Density field generated with TSC for the catalog
+[70C[[32;1mDONE[0m]
+Evaluating power spectra ...
+  Alias corrections and wave numbers are pre-computed
+  Executing 1 FFT for l = 0 ...  Done with computing 1 FFT for l = 0
+  Executing 2 FFTs for grid interlacing ...  Done with computing 2 FFTs for grid interlacing
+[70C[[32;1mDONE[0m]
