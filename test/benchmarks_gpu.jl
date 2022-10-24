@@ -111,7 +111,7 @@ println("Struct")
 
 println("Reconstruction iterative run")
 grid_size = (512, 512, 512)
-t = @benchmark begin
+@btime begin
     CUDA.@sync begin 
         BAOrec.run!($recon, $grid_size,
                     $data_cat_pos...,
@@ -120,13 +120,9 @@ t = @benchmark begin
                     $rand_cat_w)
     end
 end
-println(median(t))
-dump(t)
 
 println("Read positions from recon result")
-t = @benchmark new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum)
-println(median(t))
-dump(t)
+@btime new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum)
 new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum) #so results can be written?
 println("Copy results to CPU")
 @time new_pos = map(Array, new_pos)
@@ -141,7 +137,7 @@ println("Struct")
                               los = nothing)
 
 println("Reconstruction multigrid run")
-t = @benchmark begin
+@btime begin
     CUDA.@sync begin 
         BAOrec.run!($recon, $grid_size,
                     $data_cat_pos...,
@@ -150,12 +146,8 @@ t = @benchmark begin
                     $rand_cat_w)
     end
 end
-println(median(t))
-dump(t)
 println("Read positions from recon result")
-t = @benchmark new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum);
-println(median(t))
-dump(t)
+@btime new_pos = BAOrec.reconstructed_positions($recon, $data_cat_pos...; field = :sum);
 new_pos = BAOrec.reconstructed_positions(recon, data_cat_pos...; field = :sum);
 
 println("Copy results to CPU")
