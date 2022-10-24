@@ -19,63 +19,116 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
     icell2 = cell2 .^-1   
     losn = los != nothing ? los ./ cell : nothing
     nmesh = size(v)
-    
+    Base.Cartesian.@nexprs 3 i -> begin
+        nmesh_i = nmesh[i]
+        x_vec_i = x_vec[i]
+        cell_i = cell[i]
+        cell2_i = cell2[i]
+        icell2_i = icell2[i]
+        losn_i = losn != nothing ? losn[i] : nothing
+    end
 
     for iter in 1:niterations
 
-        @inbounds Threads.@threads for I in CartesianIndices(v)
+        #@inbounds Threads.@threads for I in CartesianIndices(v)
 
-            ix0, iy0, iz0 = Tuple(I)
+        #    ix0, iy0, iz0 = Tuple(I)
+        if los == nothing
+            @tturbo for iz0 = axes(v,3), iy0 = axes(v,2), ix0 = axes(v,1)
 
-            ixp = ix0 + 1 
-            ixp = ixp > nmesh[1] ? ixp - nmesh[1] : ixp
-            ixm = ix0 - 1 
-            ixm = ixm < 1 ? ixm + nmesh[1] : ixm
+                ixp = ix0 + 1 
+                ixp = ixp > nmesh_1 ? ixp - nmesh_1 : ixp
+                ixm = ix0 - 1 
+                ixm = ixm < 1 ? ixm + nmesh_1 : ixm
 
-            iyp = iy0 + 1 
-            iyp = iyp > nmesh[2] ? iyp - nmesh[2] : iyp
-            iym = iy0 - 1 
-            iym = iym < 1 ? iym + nmesh[2] : iym
+                iyp = iy0 + 1 
+                iyp = iyp > nmesh_2 ? iyp - nmesh_2 : iyp
+                iym = iy0 - 1 
+                iym = iym < 1 ? iym + nmesh_2 : iym
 
-            izp = iz0 + 1 
-            izp = izp > nmesh[3] ? izp - nmesh[3] : izp
-            izm = iz0 - 1 
-            izm = izm < 1 ? izm + nmesh[3] : izm
-            
+                izp = iz0 + 1 
+                izp = izp > nmesh_3 ? izp - nmesh_3 : izp
+                izm = iz0 - 1 
+                izm = izm < 1 ? izm + nmesh_3 : izm
+                
 
-            px = los == nothing ? x_vec[1][I[1]] / cell[1] : losn[1]
-            py = los == nothing ? x_vec[2][I[2]] / cell[2] : losn[2]
-            pz = los == nothing ? x_vec[3][I[3]] / cell[3] : losn[3]
+                px = los == nothing ? x_vec_1[ix0] / cell_1 : losn_1
+                py = los == nothing ? x_vec_2[iy0] / cell_2 : losn_2
+                pz = los == nothing ? x_vec_3[iz0] / cell_3 : losn_3
 
-            g = β / (cell2[1] * px^2 + cell2[2] * py^2 + cell2[3] * pz^2)
-            gpx2 = icell2[1] + g * px^2
-            gpy2 = icell2[2] + g * py^2
-            gpz2 = icell2[3] + g * pz^2
+                g = β / (cell2_1 * px^2 + cell2_2 * py^2 + cell2_3 * pz^2)
+                gpx2 = icell2_1 + g * px^2
+                gpy2 = icell2_2 + g * py^2
+                gpz2 = icell2_3 + g * pz^2
 
-            jac[I] = f[I]+
-                    gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
-                    gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
-                    gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
-                    g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
-                               -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
-                    px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
-                          -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
-                    py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
-                          -v[ix0, iym, izp]-v[ix0, iyp, izm]));
+                jac[ix0, iy0, iz0] = f[ix0, iy0, iz0]+
+                        gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
+                        gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
+                        gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
+                        g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
+                                -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
+                        px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
+                            -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
+                        py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
+                            -v[ix0, iym, izp]-v[ix0, iyp, izm]));
 
 
-            if los == nothing
-                jac[I] += g*(px*(v[ixp, iy0, iz0]-v[ixm, iy0, iz0])+
-                              py*(v[ix0, iyp, iz0]-v[ix0, iym, iz0])+
-                              pz*(v[ix0, iy0, izp]-v[ix0, iy0, izm]))
-            end #if
+                
+                jac[ix0, iy0, iz0] += g*(px*(v[ixp, iy0, iz0]-v[ixm, iy0, iz0])+
+                                py*(v[ix0, iyp, iz0]-v[ix0, iym, iz0])+
+                                pz*(v[ix0, iy0, izp]-v[ix0, iy0, izm]))
+                
 
-            jac[I] /= 2*(gpx2 + gpy2 + gpz2)
+                jac[ix0, iy0, iz0] /= 2*(gpx2 + gpy2 + gpz2)
+            end #for
+        else
+                @tturbo for iz0 = axes(v,3), iy0 = axes(v,2), ix0 = axes(v,1)
+
+                    ixp = ix0 + 1 
+                    ixp = ixp > nmesh_1 ? ixp - nmesh_1 : ixp
+                    ixm = ix0 - 1 
+                    ixm = ixm < 1 ? ixm + nmesh_1 : ixm
+    
+                    iyp = iy0 + 1 
+                    iyp = iyp > nmesh_2 ? iyp - nmesh_2 : iyp
+                    iym = iy0 - 1 
+                    iym = iym < 1 ? iym + nmesh_2 : iym
+    
+                    izp = iz0 + 1 
+                    izp = izp > nmesh_3 ? izp - nmesh_3 : izp
+                    izm = iz0 - 1 
+                    izm = izm < 1 ? izm + nmesh_3 : izm
+                    
+    
+                    px = los == nothing ? x_vec_1[ix0] / cell_1 : losn_1
+                    py = los == nothing ? x_vec_2[iy0] / cell_2 : losn_2
+                    pz = los == nothing ? x_vec_3[iz0] / cell_3 : losn_3
+    
+                    g = β / (cell2_1 * px^2 + cell2_2 * py^2 + cell2_3 * pz^2)
+                    gpx2 = icell2_1 + g * px^2
+                    gpy2 = icell2_2 + g * py^2
+                    gpz2 = icell2_3 + g * pz^2
+    
+                    jac[ix0, iy0, iz0] = f[ix0, iy0, iz0]+
+                            gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
+                            gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
+                            gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
+                            g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
+                                    -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
+                            px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
+                                -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
+                            py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
+                                -v[ix0, iym, izp]-v[ix0, iyp, izm]));
+                   
+    
+                    jac[ix0, iy0, iz0] /= 2*(gpx2 + gpy2 + gpz2)
+                end #for
+        end #if
      
 
-        end #for v
         
-        @. v = (1-damping_factor)*v + damping_factor*jac;
+        
+        @tturbo @. v = (1-damping_factor)*v + damping_factor*jac;
         
 
     end #for iter
@@ -165,58 +218,109 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
     icell2 = cell2 .^-1
     losn = los != nothing ? los ./ cell : nothing
     nmesh = size(v)
+
+    Base.Cartesian.@nexprs 3 i -> begin
+        nmesh_i = nmesh[i]
+        x_vec_i = x_vec[i]
+        cell_i = cell[i]
+        cell2_i = cell2[i]
+        icell2_i = icell2[i]
+        losn_i = losn != nothing ? losn[i] : nothing
+    end
     
-    @inbounds Threads.@threads for I in CartesianIndices(v)
+    #@inbounds Threads.@threads for I in CartesianIndices(v)
 
-        ix0, iy0, iz0 = Tuple(I)
+    #    ix0, iy0, iz0 = Tuple(I)
+    if los == nothing
+        @tturbo for iz0 = axes(v,3), iy0 = axes(v,2), ix0 = axes(v,1)
+            ixp = ix0 + 1 
+            ixp = ixp > nmesh_1 ? ixp - nmesh_1 : ixp
+            ixm = ix0 - 1 
+            ixm = ixm < 1 ? ixm + nmesh_1 : ixm
 
-        ixp = ix0 + 1 
-        ixp = ixp > nmesh[1] ? ixp - nmesh[1] : ixp
-        ixm = ix0 - 1 
-        ixm = ixm < 1 ? ixm + nmesh[1] : ixm
+            iyp = iy0 + 1 
+            iyp = iyp > nmesh_2 ? iyp - nmesh_2 : iyp
+            iym = iy0 - 1 
+            iym = iym < 1 ? iym + nmesh_2 : iym
 
-        iyp = iy0 + 1 
-        iyp = iyp > nmesh[2] ? iyp - nmesh[2] : iyp
-        iym = iy0 - 1 
-        iym = iym < 1 ? iym + nmesh[2] : iym
-
-        izp = iz0 + 1 
-        izp = izp > nmesh[3] ? izp - nmesh[3] : izp
-        izm = iz0 - 1 
-        izm = izm < 1 ? izm + nmesh[3] : izm
+            izp = iz0 + 1 
+            izp = izp > nmesh_3 ? izp - nmesh_3 : izp
+            izm = iz0 - 1 
+            izm = izm < 1 ? izm + nmesh_3 : izm
+            
         
-     
 
-        px = los == nothing ? x_vec[1][I[1]] / cell[1] : losn[1]
-        py = los == nothing ? x_vec[2][I[2]] / cell[2] : losn[2]
-        pz = los == nothing ? x_vec[3][I[3]] / cell[3] : losn[3]
+            px = los == nothing ? x_vec_1[ix0] / cell_1 : losn_1
+            py = los == nothing ? x_vec_2[iy0] / cell_2 : losn_2
+            pz = los == nothing ? x_vec_3[iz0] / cell_3 : losn_3
 
-        g = β / (cell2[1] * px^2 + cell2[2] * py^2 + cell2[3] * pz^2)
-        gpx2 = icell2[1] + g * px^2
-        gpy2 = icell2[2] + g * py^2
-        gpz2 = icell2[3] + g * pz^2
+            g = β / (cell2_1 * px^2 + cell2_2 * py^2 + cell2_3 * pz^2)
+            gpx2 = icell2_1 + g * px^2
+            gpy2 = icell2_2 + g * py^2
+            gpz2 = icell2_3 + g * pz^2
 
-        r[I] = 2*(gpx2 + gpy2 + gpz2)*v[I] -
-            (gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
-            gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
-            gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
-            g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
-                        -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
-                    px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
-                        -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
-                    py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
-                        -v[ix0, iym, izp]-v[ix0, iyp, izm])));
+            r[ix0,iy0,iz0] = 2*(gpx2 + gpy2 + gpz2)*v[ix0,iy0,iz0] -
+                (gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
+                gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
+                gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
+                g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
+                            -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
+                        px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
+                            -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
+                        py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
+                            -v[ix0, iym, izp]-v[ix0, iyp, izm])));
+            
+            
+                r[ix0,iy0,iz0] -= g*(px*(v[ixp, iy0, iz0]-v[ixm, iy0, iz0])+
+                        py*(v[ix0, iyp, iz0]-v[ix0, iym, iz0])+
+                        pz*(v[ix0, iy0, izp]-v[ix0, iy0, izm]));
+            
+
+        end # for v
+    else
+        @tturbo for iz0 = axes(v,3), iy0 = axes(v,2), ix0 = axes(v,1)
+            ixp = ix0 + 1 
+            ixp = ixp > nmesh_1 ? ixp - nmesh_1 : ixp
+            ixm = ix0 - 1 
+            ixm = ixm < 1 ? ixm + nmesh_1 : ixm
+
+            iyp = iy0 + 1 
+            iyp = iyp > nmesh_2 ? iyp - nmesh_2 : iyp
+            iym = iy0 - 1 
+            iym = iym < 1 ? iym + nmesh_2 : iym
+
+            izp = iz0 + 1 
+            izp = izp > nmesh_3 ? izp - nmesh_3 : izp
+            izm = iz0 - 1 
+            izm = izm < 1 ? izm + nmesh_3 : izm
+            
         
-        if los == nothing
-            r[I] -= g*(px*(v[ixp, iy0, iz0]-v[ixm, iy0, iz0])+
-                    py*(v[ix0, iyp, iz0]-v[ix0, iym, iz0])+
-                    pz*(v[ix0, iy0, izp]-v[ix0, iy0, izm]));
-        end #if
 
-    end # for v
+            px = los == nothing ? x_vec_1[ix0] / cell_1 : losn_1
+            py = los == nothing ? x_vec_2[iy0] / cell_2 : losn_2
+            pz = los == nothing ? x_vec_3[iz0] / cell_3 : losn_3
 
-    for I in CartesianIndices(v)
-        r[I] = f[I] - r[I]
+            g = β / (cell2_1 * px^2 + cell2_2 * py^2 + cell2_3 * pz^2)
+            gpx2 = icell2_1 + g * px^2
+            gpy2 = icell2_2 + g * py^2
+            gpz2 = icell2_3 + g * pz^2
+
+            r[ix0,iy0,iz0] = 2*(gpx2 + gpy2 + gpz2)*v[ix0,iy0,iz0] -
+                (gpx2*(v[ixp, iy0, iz0]+v[ixm, iy0, iz0])+
+                gpy2*(v[ix0, iyp, iz0]+v[ix0, iym, iz0])+
+                gpz2*(v[ix0, iy0, izp]+v[ix0, iy0, izm])+
+                g/2*(px*py*(v[ixp, iyp, iz0]+v[ixm, iym, iz0]
+                            -v[ixm, iyp, iz0]-v[ixp, iym, iz0])+
+                        px*pz*(v[ixp, iy0, izp]+v[ixm, iy0, izm]
+                            -v[ixm, iy0, izp]-v[ixp, iy0, izm])+
+                        py*pz*(v[ix0, iyp, izp]+v[ix0, iym, izm]
+                            -v[ix0, iym, izp]-v[ix0, iyp, izm])))
+
+        end # for v
+    end #if
+
+    @tturbo for iz0 = axes(v,3), iy0 = axes(v,2), ix0 = axes(v,1)
+        r[ix0,iy0,iz0] = f[ix0,iy0,iz0] - r[ix0,iy0,iz0]
     end #for
     r
  end #func
@@ -298,9 +402,9 @@ function jacobi!(v::AbstractArray{T,3}, f::AbstractArray{T,3}, x_vec::Tuple{Abst
         nmesh_i = nmesh[i]
         nmesh2_i = nmesh2[i]
     end
-    @inbounds Threads.@threads for I in CartesianIndices(v2h)
-    #@tturbo for iz0 = axes(v2h,3), iy0 = axes(v2h,2), ix0 = axes(v2h,1)
-        ix0, iy0, iz0 = Tuple(I)
+    #@inbounds Threads.@threads for I in CartesianIndices(v2h)
+    @tturbo for iz0 = axes(v2h,3), iy0 = axes(v2h,2), ix0 = axes(v2h,1)
+    #    ix0, iy0, iz0 = Tuple(I)
         
 
         ixp = ix0 + 1 
@@ -425,11 +529,12 @@ function reduce!(v2h::AbstractArray{T,3}, v1h::AbstractArray{T,3}) where T <: Ab
     #@inbounds Threads.@threads for I in CartesianIndices(v2h)
     @tturbo for _iz0 = axes(v2h,3), _iy0 = axes(v2h,2), _ix0 = axes(v2h,1)
 
-        
+    
+        #_ix0, _iy0, _iz0 = Tuple(I)
 
         ix0 = _ix0 * 2
-        iy0 = _ix0 * 2
-        iz0 = _ix0 * 2
+        iy0 = _iy0 * 2
+        iz0 = _iz0 * 2
         
         ixp = ix0 + 1 
         ixp = ixp > nmesh_1 ? ixp - nmesh_1 : ixp
